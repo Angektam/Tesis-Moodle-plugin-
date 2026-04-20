@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Automático - AI Assignment Plugin</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-header {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #00ff00;
+        }
+        .test-case {
+            background: #2d2d2d;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border-left: 4px solid #666;
+        }
+        .test-case.running {
+            border-left-color: #ffaa00;
+        }
+        .test-case.success {
+            border-left-color: #00ff00;
+        }
+        .test-case.error {
+            border-left-color: #ff0000;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .status.pending { background: #666; }
+        .status.running { background: #ffaa00; color: #000; }
+        .status.success { background: #00ff00; color: #000; }
+        .status.error { background: #ff0000; }
+        pre {
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .btn {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #00cc00;
+        }
+        .btn-danger {
+            background: #ff0000;
+            color: white;
+        }
+        .summary {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .summary .number {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 10px;
+        }
+        .summary .success { color: #00ff00; }
+        .summary .error { color: #ff0000; }
+    </style>
+</head>
+<body>
+    <div class="test-header">
+        <h1>🧪 TEST AUTOMÁTICO - AI ASSIGNMENT PLUGIN</h1>
+        <p>Prueba completa del sistema con evaluación real de IA</p>
+    </div>
+    
+    <div>
+        <button class="btn" onclick="runAllTests()">▶️ Ejecutar Todas las Pruebas</button>
+        <button class="btn btn-danger" onclick="clearData()">🗑️ Limpiar Datos</button>
+    </div>
+    
+    <div id="testResults"></div>
+    
+    <div id="summary" class="summary" style="display: none;">
+        <h2>📊 RESUMEN DE PRUEBAS</h2>
+        <div>
+            <span class="number success" id="successCount">0</span>
+            <span>Exitosas</span>
+        </div>
+        <div>
+            <span class="number error" id="errorCount">0</span>
+            <span>Fallidas</span>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = 'TU_API_KEY_AQUI';
+        const API_MODEL = 'gpt-4o-mini';
+        
+        let testResults = [];
+        let successCount = 0;
+        let errorCount = 0;
+
+        
+        const tests = [
+            {
+                name: 'Test 1: Crear tarea de programación',
+                fn: async () => {
+                    const problem = {
+                        name: 'Función Factorial',
+                        description: 'Implementa una función que calcule el factorial de un número',
+                        type: 'programming',
+                        solution: `def factorial(n):
+    if n == 0 or n == 1:
+        return 1
+    return n * factorial(n - 1)`
+                    };
+                    localStorage.setItem('test_problem_1', JSON.stringify(problem));
+                    return { success: true, data: problem };
+                }
+            },
+            {
+                name: 'Test 2: Crear tarea de matemáticas',
+                fn: async () => {
+                    const problem = {
+                        name: 'Ecuación Cuadrática',
+                        description: 'Resuelve la ecuación x² - 5x + 6 = 0',
+                        type: 'math',
+                        solution: `x² - 5x + 6 = 0
+Factorización: (x - 2)(x - 3) = 0
+Por lo tanto: x = 2 o x = 3`
+                    };
+                    localStorage.setItem('test_problem_2', JSON.stringify(problem));
+                    return { success: true, data: problem };
+                }
+            },
+            {
+                name: 'Test 3: Evaluar respuesta correcta (Programación)',
+                fn: async () => {
+                    const teacherSolution = `def factorial(n):
+    if n == 0 or n == 1:
+        return 1
+    return n * factorial(n - 1)`;
+                    
+                    const studentAnswer = `def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)`;
+                    
+                    const result = await evaluateWithAI(studentAnswer, teacherSolution, 'programming');
+                    
+                    if (result.score >= 70) {
+                        return { success: true, data: result };
+                    } else {
+                        throw new Error(`Score muy bajo: ${result.score}`);
+                    }
+                }
+            },
+            {
+                name: 'Test 4: Evaluar respuesta incorrecta (Programación)',
+                fn: async () => {
+                    const teacherSolution = `def factorial(n):
+    if n == 0 or n == 1:
+        return 1
+    return n * factorial(n - 1)`;
+                    
+                    const studentAnswer = `def factorial(n):
+    return n * factorial(n - 1)  # Falta caso base`;
+                    
+                    const result = await evaluateWithAI(studentAnswer, teacherSolution, 'programming');
+                    
+                    if (result.score < 70) {
+                        return { success: true, data: result };
+                    } else {
+                        throw new Error(`Score muy alto para respuesta incorrecta: ${result.score}`);
+                    }
+                }
+            },
+            {
+                name: 'Test 5: Evaluar respuesta correcta (Matemáticas)',
+                fn: async () => {
+                    const teacherSolution = `x² - 5x + 6 = 0
+Factorización: (x - 2)(x - 3) = 0
+x = 2 o x = 3`;
+                    
+                    const studentAnswer = `Usando la fórmula general:
+x = (5 ± √(25-24)) / 2
+x = (5 ± 1) / 2
+x = 3 o x = 2`;
+                    
+                    const result = await evaluateWithAI(studentAnswer, teacherSolution, 'math');
+                    
+                    if (result.score >= 70) {
+                        return { success: true, data: result };
+                    } else {
+                        throw new Error(`Score muy bajo: ${result.score}`);
+                    }
+                }
+            },
+            {
+                name: 'Test 6: Detectar plagio (Alta similitud)',
+                fn: async () => {
+                    const answer1 = `def factorial(n):
+    if n == 0:
+        return 1
+    return n * factorial(n - 1)`;
+                    
+                    const answer2 = `def factorial(num):
+    if num == 0:
+        return 1
+    return num * factorial(num - 1)`;
+                    
+                    const similarity = await compareSimilarity(answer1, answer2);
+                    
+                    if (similarity >= 70) {
+                        return { success: true, data: { similarity } };
+                    } else {
+                        throw new Error(`Similitud muy baja: ${similarity}%`);
+                    }
+                }
+            },
+            {
+                name: 'Test 7: Detectar plagio (Baja similitud)',
+                fn: async () => {
+                    const answer1 = `def factorial(n):
+    if n == 0:
+        return 1
+    return n * factorial(n - 1)`;
+                    
+                    const answer2 = `def fibonacci(n):
+    if n <= 1:
+        return n
+    return fibonacci(n-1) + fibonacci(n-2)`;
+                    
+                    const similarity = await compareSimilarity(answer1, answer2);
+                    
+                    if (similarity < 50) {
+                        return { success: true, data: { similarity } };
+                    } else {
+                        throw new Error(`Similitud muy alta: ${similarity}%`);
+                    }
+                }
+            }
+        ];
+
+        
+        async function evaluateWithAI(studentAnswer, teacherSolution, type) {
+            const systemPrompt = type === 'programming' 
+                ? 'Eres un experto en evaluación de código. Compara las soluciones y responde en JSON: {"similarity_score": 0-100, "feedback": "texto breve", "analysis": "análisis detallado"}'
+                : 'Eres un experto en matemáticas. Compara las soluciones y responde en JSON: {"similarity_score": 0-100, "feedback": "texto breve", "analysis": "análisis detallado"}';
+            
+            const userPrompt = `Compara estas soluciones:\n\nSOLUCIÓN CORRECTA:\n${teacherSolution}\n\nRESPUESTA DEL ESTUDIANTE:\n${studentAnswer}\n\nEvalúa y proporciona similarity_score, feedback y analysis en JSON.`;
+            
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: API_MODEL,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    temperature: 0.3,
+                    response_format: { type: 'json_object' }
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Error en la API de OpenAI');
+            }
+            
+            const data = await response.json();
+            const result = JSON.parse(data.choices[0].message.content);
+            
+            return {
+                score: result.similarity_score,
+                feedback: result.feedback,
+                analysis: result.analysis
+            };
+        }
+        
+        async function compareSimilarity(answer1, answer2) {
+            const prompt = `Analiza la similitud entre estas dos respuestas. Responde solo con un número del 0 al 100 indicando el porcentaje de similitud:\n\nRESPUESTA 1:\n${answer1}\n\nRESPUESTA 2:\n${answer2}`;
+            
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: API_MODEL,
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature: 0.3
+                })
+            });
+            
+            const data = await response.json();
+            const similarity = parseInt(data.choices[0].message.content.match(/\d+/)[0]);
+            
+            return similarity;
+        }
+        
+        async function runAllTests() {
+            const container = document.getElementById('testResults');
+            container.innerHTML = '';
+            successCount = 0;
+            errorCount = 0;
+            
+            document.getElementById('summary').style.display = 'none';
+            
+            for (let i = 0; i < tests.length; i++) {
+                const test = tests[i];
+                const testDiv = document.createElement('div');
+                testDiv.className = 'test-case running';
+                testDiv.id = `test-${i}`;
+                testDiv.innerHTML = `
+                    <span class="status running">⏳ EJECUTANDO</span>
+                    <strong>${test.name}</strong>
+                    <div id="result-${i}"></div>
+                `;
+                container.appendChild(testDiv);
+                
+                try {
+                    const startTime = Date.now();
+                    const result = await test.fn();
+                    const duration = Date.now() - startTime;
+                    
+                    testDiv.className = 'test-case success';
+                    testDiv.querySelector('.status').className = 'status success';
+                    testDiv.querySelector('.status').textContent = '✅ ÉXITO';
+                    
+                    document.getElementById(`result-${i}`).innerHTML = `
+                        <pre>Tiempo: ${duration}ms\nResultado: ${JSON.stringify(result.data, null, 2)}</pre>
+                    `;
+                    
+                    successCount++;
+                } catch (error) {
+                    testDiv.className = 'test-case error';
+                    testDiv.querySelector('.status').className = 'status error';
+                    testDiv.querySelector('.status').textContent = '❌ ERROR';
+                    
+                    document.getElementById(`result-${i}`).innerHTML = `
+                        <pre style="color: #ff0000;">Error: ${error.message}</pre>
+                    `;
+                    
+                    errorCount++;
+                }
+                
+                // Pequeña pausa entre tests
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            // Mostrar resumen
+            document.getElementById('summary').style.display = 'block';
+            document.getElementById('successCount').textContent = successCount;
+            document.getElementById('errorCount').textContent = errorCount;
+        }
+        
+        function clearData() {
+            if (confirm('¿Estás seguro de que quieres limpiar todos los datos de prueba?')) {
+                localStorage.clear();
+                alert('✅ Datos limpiados');
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>

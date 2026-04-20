@@ -1,0 +1,56 @@
+// Pega este código en https://dbdiagram.io/d
+// Diagrama BD - aiassignment plugin (Unified)
+
+Table mdl_user {
+  id int [pk, increment]
+  email varchar(191)
+  password varchar(255)
+  firstname varchar(255)
+  lastname varchar(255)
+}
+
+Table mdl_course {
+  id int [pk, increment]
+  fullname varchar(255)
+  shortname varchar(255)
+}
+
+Table mdl_aiassignment {
+  id int [pk, increment]
+  course int [ref: > mdl_course.id]
+  teacher_id int [ref: > mdl_user.id]
+  name varchar(255)
+  intro longtext
+  description longtext
+  type varchar(20)
+  solution longtext
+  documentation longtext
+  test_cases longtext
+  grade int
+  maxattempts int
+  timecreated int
+  timemodified int
+}
+
+Table mdl_aiassignment_submissions {
+  id int [pk, increment]
+  assignment int [ref: > mdl_aiassignment.id]
+  userid int [ref: > mdl_user.id]
+  answer longtext
+  status varchar(20)
+  score decimal
+  feedback longtext
+  attempt int
+  evaluated_at int
+  timecreated int
+  timemodified int
+}
+
+Table mdl_aiassignment_evaluations {
+  id int [pk, increment]
+  submission int [ref: > mdl_aiassignment_submissions.id]
+  similarity_score decimal
+  ai_feedback longtext
+  ai_analysis longtext
+  timecreated int
+}

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Diagrama BD - aiassignment</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f0f4f8; margin: 0; padding: 30px; }
+  h2 { text-align: center; color: #333; margin-bottom: 30px; }
+
+  .canvas {
+    position: relative;
+    width: 1100px;
+    margin: 0 auto;
+    height: 780px;
+  }
+
+  /* ── Table card ── */
+  .table {
+    position: absolute;
+    width: 260px;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    font-size: 13px;
+  }
+  .table-header {
+    background: #5b8db8;
+    color: #fff;
+    padding: 7px 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .table-header .icon { font-size: 16px; }
+  .table-body { background: #fff; }
+  .field {
+    display: flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-bottom: 1px solid #e8edf2;
+    gap: 6px;
+  }
+  .field:last-child { border-bottom: none; }
+  .field .key  { font-size: 14px; width: 16px; text-align: center; }
+  .field .name { flex: 1; color: #222; }
+  .field .type { color: #777; font-size: 11px; }
+  .section-label {
+    background: #dce8f3;
+    color: #5b8db8;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 3px 10px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* key icons */
+  .pk  { color: #f5a623; }
+  .fk  { color: #e05c5c; }
+  .col { color: #7ab3d4; }
+
+  /* ── SVG lines ── */
+  svg.lines {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+  .rel-line { stroke: #5b8db8; stroke-width: 1.8; stroke-dasharray: 6,3; fill: none; }
+
+  /* positions */
+  #t-course       { top: 20px;  left: 30px;  }
+  #t-user         { top: 20px;  left: 420px; }
+  #t-assignment   { top: 220px; left: 220px; }
+  #t-submissions  { top: 460px; left: 220px; }
+  #t-evaluations  { top: 460px; left: 700px; }
+</style>
+</head>
+<body>
+<h2>Diagrama de Base de Datos — aiassignment (Unified)</h2>
+
+<div class="canvas">
+
+  <!-- SVG connector lines -->
+  <svg class="lines">
+    <!-- course → aiassignment -->
+    <line class="rel-line" x1="160" y1="100" x2="280" y2="220"/>
+    <text x="185" y="165" font-size="11" fill="#5b8db8">1</text>
+    <text x="265" y="215" font-size="11" fill="#5b8db8">N</text>
+
+    <!-- user → aiassignment (teacher) -->
+    <line class="rel-line" x1="550" y1="110" x2="430" y2="220"/>
+    <text x="520" y="165" font-size="11" fill="#5b8db8">1</text>
+    <text x="435" y="215" font-size="11" fill="#5b8db8">N</text>
+
+    <!-- user → submissions (student) -->
+    <line class="rel-line" x1="560" y1="130" x2="420" y2="460"/>
+    <text x="555" y="300" font-size="11" fill="#5b8db8">1</text>
+    <text x="425" y="455" font-size="11" fill="#5b8db8">N</text>
+
+    <!-- aiassignment → submissions -->
+    <line class="rel-line" x1="350" y1="420" x2="350" y2="460"/>
+    <text x="355" y="440" font-size="11" fill="#5b8db8">1</text>
+    <text x="355" y="458" font-size="11" fill="#5b8db8">N</text>
+
+    <!-- submissions → evaluations -->
+    <line class="rel-line" x1="480" y1="560" x2="700" y2="560"/>
+    <text x="490" y="550" font-size="11" fill="#5b8db8">1</text>
+    <text x="690" y="550" font-size="11" fill="#5b8db8">N</text>
+  </svg>
+
+  <!-- course (Moodle native) -->
+  <div class="table" id="t-course">
+    <div class="table-header"><span class="icon">🗄</span> course <small style="opacity:.7">(Moodle)</small></div>
+    <div class="table-body">
+      <div class="field"><span class="key pk">🔑</span><span class="name">id</span><span class="type">INT</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">fullname</span><span class="type">VARCHAR(255)</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">shortname</span><span class="type">VARCHAR(255)</span></div>
+    </div>
+    <div class="section-label"><span>Indexes</span><span>▶</span></div>
+  </div>
+
+  <!-- user (Moodle native) -->
+  <div class="table" id="t-user">
+    <div class="table-header"><span class="icon">🗄</span> user <small style="opacity:.7">(Moodle)</small></div>
+    <div class="table-body">
+      <div class="field"><span class="key pk">🔑</span><span class="name">id</span><span class="type">INT</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">email</span><span class="type">VARCHAR(191)</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">password</span><span class="type">VARCHAR(255)</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">firstname / lastname</span><span class="type">VARCHAR(255)</span></div>
+    </div>
+    <div class="section-label"><span>Indexes</span><span>▶</span></div>
+  </div>
+
+  <!-- aiassignment -->
+  <div class="table" id="t-assignment">
+    <div class="table-header"><span class="icon">📋</span> aiassignment</div>
+    <div class="table-body">
+      <div class="field"><span class="key pk">🔑</span><span class="name">id</span><span class="type">INT(10) AUTO</span></div>
+      <div class="field"><span class="key fk">🔴</span><span class="name">course</span><span class="type">INT → course.id</span></div>
+      <div class="field"><span class="key fk">🔴</span><span class="name">teacher_id</span><span class="type">INT → user.id</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">name</span><span class="type">VARCHAR(255)</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">intro</span><span class="type">TEXT</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">description</span><span class="type">TEXT</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">type</span><span class="type">ENUM(math|prog)</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">solution</span><span class="type">TEXT</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">documentation</span><span class="type">TEXT</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">test_cases</span><span class="type">TEXT</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">grade</span><span class="type">INT(10)</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">maxattempts</span><span class="type">INT(6)</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">timecreated</span><span class="type">INT(10)</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">timemodified</span><span class="type">INT(10)</span></div>
+    </div>
+    <div class="section-label"><span>Indexes</span><span>▶</span></div>
+  </div>
+
+  <!-- aiassignment_submissions -->
+  <div class="table" id="t-submissions">
+    <div class="table-header"><span class="icon">📝</span> aiassignment_submissions</div>
+    <div class="table-body">
+      <div class="field"><span class="key pk">🔑</span><span class="name">id</span><span class="type">INT(10) AUTO</span></div>
+      <div class="field"><span class="key fk">🔴</span><span class="name">assignment</span><span class="type">INT → aiassignment.id</span></div>
+      <div class="field"><span class="key fk">🔴</span><span class="name">userid</span><span class="type">INT → user.id</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">answer</span><span class="type">TEXT</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">status</span><span class="type">ENUM(pending|eval|flag)</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">score</span><span class="type">DECIMAL(5,2)</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">feedback</span><span class="type">TEXT</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">attempt</span><span class="type">INT(6)</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">evaluated_at</span><span class="type">INT(10)</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">timecreated</span><span class="type">INT(10)</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">timemodified</span><span class="type">INT(10)</span></div>
+    </div>
+    <div class="section-label"><span>Indexes</span><span>▶</span></div>
+  </div>
+
+  <!-- aiassignment_evaluations -->
+  <div class="table" id="t-evaluations">
+    <div class="table-header"><span class="icon">🤖</span> aiassignment_evaluations</div>
+    <div class="table-body">
+      <div class="field"><span class="key pk">🔑</span><span class="name">id</span><span class="type">INT(10) AUTO</span></div>
+      <div class="field"><span class="key fk">🔴</span><span class="name">submission</span><span class="type">INT → submissions.id</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">similarity_score</span><span class="type">DECIMAL(5,2)</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">ai_feedback</span><span class="type">TEXT</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">ai_analysis</span><span class="type">TEXT (JSON)</span></div>
+      <div class="field"><span class="key col">◇</span><span class="name">timecreated</span><span class="type">INT(10)</span></div>
+    </div>
+    <div class="section-label"><span>Indexes</span><span>▶</span></div>
+  </div>
+
+</div>
+
+<p style="text-align:center;color:#999;font-size:12px;margin-top:20px">
+  🔑 Primary Key &nbsp;|&nbsp; 🔴 Foreign Key &nbsp;|&nbsp; ◇ Column &nbsp;|&nbsp; --- Relación 1:N
+</p>
+</body>
+</html>

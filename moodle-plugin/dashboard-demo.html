@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Boceto Mejorado</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #333; }
+
+/* Header */
+.dash-header {
+    background: linear-gradient(135deg, #1a73e8, #0d47a1);
+    color: white;
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.dash-header h1 { font-size: 22px; font-weight: 600; }
+.dash-header .course-badge {
+    background: rgba(255,255,255,0.2);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+}
+
+.dashboard { padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+
+/* ── Tarjetas ── */
+.cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
+.card {
+    background: white;
+    border-radius: 14px;
+    padding: 20px 22px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    position: relative;
+    overflow: hidden;
+    cursor: default;
+    transition: transform .2s, box-shadow .2s;
+    border-top: 4px solid transparent;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+.card.clickable { cursor: pointer; }
+.card-blue  { border-top-color: #1a73e8; }
+.card-green { border-top-color: #28a745; }
+.card-teal  { border-top-color: #17a2b8; }
+.card-amber { border-top-color: #ffc107; }
+.card-red   { border-top-color: #dc3545; }
+.card-num { font-size: 38px; font-weight: 700; line-height: 1; margin-bottom: 6px; }
+.card-blue  .card-num { color: #1a73e8; }
+.card-green .card-num { color: #28a745; }
+.card-teal  .card-num { color: #17a2b8; }
+.card-amber .card-num { color: #e6a800; }
+.card-red   .card-num { color: #dc3545; }
+.card-label { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: #888; font-weight: 600; }
+.card-icon { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 42px; opacity: .1; }
+.card-link { font-size: 11px; color: #1a73e8; margin-top: 6px; display: block; text-decoration: none; }
+.card-link:hover { text-decoration: underline; }
+
+/* ── Layout principal ── */
+.main { display: grid; grid-template-columns: 1fr 380px; gap: 20px; }
+.left { display: flex; flex-direction: column; gap: 20px; }
+.right { display: flex; flex-direction: column; gap: 20px; }
+
+/* ── Secciones ── */
+.section {
+    background: white;
+    border-radius: 14px;
+    padding: 22px 24px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+}
+.section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ── Tabla ── */
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+thead tr { background: #f8f9fa; }
+th { padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase;
+     letter-spacing: .5px; color: #666; font-weight: 700; }
+td { padding: 11px 12px; border-bottom: 1px solid #f3f3f3; vertical-align: middle; }
+tbody tr:hover { background: #fafbfc; }
+tbody tr:last-child td { border-bottom: none; }
+
+/* ── Badges ── */
+.badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+.badge-green  { background: #d4edda; color: #155724; }
+.badge-teal   { background: #d1ecf1; color: #0c5460; }
+.badge-amber  { background: #fff3cd; color: #856404; }
+.badge-red    { background: #f8d7da; color: #721c24; }
+.badge-gray   { background: #e9ecef; color: #495057; }
+
+/* Plagio coloreado */
+.plag-high   { color: #dc3545; font-weight: 700; }
+.plag-medium { color: #e6a800; font-weight: 700; }
+.plag-low    { color: #28a745; font-weight: 700; }
+
+/* ── Botones ── */
+.btn { display: inline-block; padding: 6px 14px; border-radius: 7px; font-size: 12px;
+       font-weight: 600; text-decoration: none; border: none; cursor: pointer; transition: .2s; }
+.btn-primary { background: #1a73e8; color: white; }
+.btn-primary:hover { background: #1557b0; }
+.btn-danger  { background: #dc3545; color: white; }
+.btn-danger:hover  { background: #b02a37; }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+
+/* ── Filtro ── */
+.filter-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.filter-bar select {
+    padding: 7px 12px; border-radius: 8px; border: 1px solid #dee2e6;
+    font-size: 13px; background: #f8f9fa; cursor: pointer;
+}
+
+/* ── Avatar ── */
+.avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: #1a73e8; color: white;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; margin-right: 8px; vertical-align: middle;
+}
+.student-cell { display: flex; align-items: center; }
+
+/* ── Top performers ── */
+.performers { display: flex; flex-direction: column; gap: 10px; }
+.performer {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; background: #f8f9fa; border-radius: 10px;
+    transition: .2s; cursor: pointer;
+}
+.performer:hover { background: #e9ecef; transform: translateX(4px); }
+.rank {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 14px; flex-shrink: 0;
+}
+.rank-1 { background: linear-gradient(135deg,#ffd700,#ffed4e); color: #333; box-shadow: 0 2px 8px rgba(255,215,0,.4); }
+.rank-2 { background: linear-gradient(135deg,#c0c0c0,#e8e8e8); color: #333; }
+.rank-3 { background: linear-gradient(135deg,#cd7f32,#e8a87c); color: white; }
+.rank-n { background: #dee2e6; color: #555; }
+.perf-info { flex: 1; }
+.perf-name { font-weight: 600; font-size: 13.5px; }
+.perf-sub  { font-size: 11px; color: #888; margin-top: 2px; }
+.perf-grade { font-size: 16px; font-weight: 800; }
+
+/* ── Alerta plagio ── */
+.plagio-alert {
+    background: #fff5f5; border: 1px solid #f5c6cb; border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
+}
+.plagio-alert .icon { font-size: 22px; }
+.plagio-alert .text { font-size: 13px; color: #721c24; }
+.plagio-alert .text strong { display: block; font-size: 14px; margin-bottom: 2px; }
+
+/* ── Tiempo relativo ── */
+.time-rel { font-size: 12px; color: #888; border-bottom: 1px dashed #ccc; cursor: help; }
+</style>
+</head>
+<body>
+
+<div class="dash-header">
+    <h1>🤖 AI Assignment — Dashboard</h1>
+    <span class="course-badge">📚 Curso: test</span>
+</div>
+
+<div class="dashboard">
+
+<!-- TARJETAS -->
+<div class="cards">
+    <div class="card card-blue">
+        <div class="card-num">1</div>
+        <div class="card-label">Total de Tareas</div>
+        <div class="card-icon">📋</div>
+    </div>
+    <div class="card card-green">
+        <div class="card-num">84.5%</div>
+        <div class="card-label">Promedio General</div>
+        <div class="card-icon">⭐</div>
+    </div>
+    <div class="card card-teal">
+        <div class="card-num">36</div>
+        <div class="card-label">Estudiantes Activos</div>
+        <div class="card-icon">👥</div>
+    </div>
+    <div class="card card-amber">
+        <div class="card-num">0</div>
+        <div class="card-label">Evaluaciones Pendientes</div>
+        <div class="card-icon">⏰</div>
+    </div>
+    <!-- MEJORA: tarjeta plagio clickeable con enlace -->
+    <div class="card card-red clickable" onclick="alert('→ Ir al reporte de plagio')">
+        <div class="card-num">8</div>
+        <div class="card-label">🔍 Alertas de Plagio</div>
+        <div class="card-icon">⚠️</div>
+        <a class="card-link" href="#">Ver reporte completo →</a>
+    </div>
+</div>
+
+<!-- ALERTA PLAGIO (si hay casos) -->
+<div class="plagio-alert">
+    <span class="icon">🚨</span>
+    <div class="text">
+        <strong>8 alumnos con similitud ≥ 75% detectada</strong>
+        Se recomienda revisar el reporte de plagio antes de publicar calificaciones.
+        <a href="#" style="color:#dc3545; font-weight:600;">Ver reporte →</a>
+    </div>
+</div>
+
+<div class="main">
+<div class="left">
+
+<!-- TABLA DE TAREAS -->
+<div class="section">
+    <div class="section-title">📋 Resumen de Tareas</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th><th>Tipo</th><th>Envíos</th>
+                <th>Promedio</th><th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><a href="#" style="color:#1a73e8;font-weight:600;">tets-32</a></td>
+                <td><span class="badge badge-teal">Programación</span></td>
+                <td style="text-align:center;font-weight:700;">38</td>
+                <td style="text-align:center;"><span class="badge badge-green">84.5%</span></td>
+                <td>
+                    <a href="#" class="btn btn-primary btn-sm">Ver envíos</a>
+                    <a href="#" class="btn btn-danger btn-sm">🔍 Plagio</a>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- ENVÍOS RECIENTES -->
+<div class="section">
+    <div class="section-title">🕐 Envíos Recientes</div>
+
+    <!-- MEJORA: filtro por tarea -->
+    <div class="filter-bar">
+        <label style="font-size:13px;color:#666;">Filtrar por tarea:</label>
+        <select>
+            <option>Todas las tareas</option>
+            <option selected>tets-32</option>
+        </select>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Tarea</th><th>Estudiante</th><th>Enviado</th>
+                <th>Calificación</th><th>🔍 Plagio</th><th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>tets-32</td>
+                <td class="student-cell"><span class="avatar">IM</span> Isabella Morales</td>
+                <td><span class="time-rel" title="15 Mar 2026, 14:03">hace 4 días</span></td>
+                <td><span class="badge badge-green">83.0%</span></td>
+                <td><span class="plag-medium">58.9%</span></td>
+                <td><a href="#" class="btn btn-primary btn-sm">Ver</a></td>
+            </tr>
+            <tr>
+                <td>tets-32</td>
+                <td class="student-cell"><span class="avatar">JM</span> Joaquín Medina</td>
+                <td><span class="time-rel" title="15 Mar 2026, 14:03">hace 4 días</span></td>
+                <td><span class="badge badge-green">91.0%</span></td>
+                <td><span class="plag-medium">49.6%</span></td>
+                <td><a href="#" class="btn btn-primary btn-sm">Ver</a></td>
+            </tr>
+            <tr>
+                <td>tets-32</td>
+                <td class="student-cell"><span class="avatar">MV</span> Mariana Vega</td>
+                <td><span class="time-rel" title="15 Mar 2026, 14:03">hace 4 días</span></td>
+                <td><span class="badge badge-green">93.0%</span></td>
+                <td><span class="plag-low">44.3%</span></td>
+                <td><a href="#" class="btn btn-primary btn-sm">Ver</a></td>
+            </tr>
+            <tr>
+                <td>tets-32</td>
+                <td class="student-cell"><span class="avatar">CG</span> Carlos García</td>
+                <td><span class="time-rel" title="15 Mar 2026, 14:03">hace 4 días</span></td>
+                <td><span class="badge badge-teal">88.0%</span></td>
+                <td><span class="plag-high">91.0%</span></td>
+                <td><a href="#" class="btn btn-primary btn-sm">Ver</a></td>
+            </tr>
+            <tr>
+                <td>tets-32</td>
+                <td class="student-cell"><span class="avatar">ML</span> María López</td>
+                <td><span class="time-rel" title="15 Mar 2026, 14:03">hace 4 días</span></td>
+                <td><span class="badge badge-amber">79.0%</span></td>
+                <td><span class="plag-high">79.0%</span></td>
+                <td><a href="#" class="btn btn-primary btn-sm">Ver</a></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+</div><!-- /left -->
+<div class="right">
+
+<!-- GRÁFICA -->
+<div class="section">
+    <div class="section-title">📊 Distribución de Calificaciones</div>
+    <canvas id="gradeChart" height="200"></canvas>
+</div>
+
+<!-- TOP PERFORMERS -->
+<div class="section">
+    <div class="section-title">🏆 Top Estudiantes</div>
+    <div class="performers">
+        <div class="performer">
+            <div class="rank rank-1">1</div>
+            <div class="perf-info">
+                <div class="perf-name">Natalia Ríos</div>
+                <div class="perf-sub">3 envíos · Programación</div>
+            </div>
+            <div class="perf-grade" style="color:#28a745;">96.0%</div>
+        </div>
+        <div class="performer">
+            <div class="rank rank-2">2</div>
+            <div class="perf-info">
+                <div class="perf-name">Paula Delgado</div>
+                <div class="perf-sub">2 envíos · Programación</div>
+            </div>
+            <div class="perf-grade" style="color:#28a745;">95.0%</div>
+        </div>
+        <div class="performer">
+            <div class="rank rank-3">3</div>
+            <div class="perf-info">
+                <div class="perf-name">Alejandro Mora</div>
+                <div class="perf-sub">2 envíos · Programación</div>
+            </div>
+            <div class="perf-grade" style="color:#17a2b8;">94.0%</div>
+        </div>
+        <div class="performer">
+            <div class="rank rank-n">4</div>
+            <div class="perf-info">
+                <div class="perf-name">Ignacio Fuentes</div>
+                <div class="perf-sub">1 envío · Programación</div>
+            </div>
+            <div class="perf-grade" style="color:#17a2b8;">89.0%</div>
+        </div>
+        <div class="performer">
+            <div class="rank rank-n">5</div>
+            <div class="perf-info">
+                <div class="perf-name">Catalina Espinoza</div>
+                <div class="perf-sub">1 envío · Programación</div>
+            </div>
+            <div class="perf-grade" style="color:#17a2b8;">88.0%</div>
+        </div>
+    </div>
+</div>
+
+</div><!-- /right -->
+</div><!-- /main -->
+</div><!-- /dashboard -->
+
+<script>
+new Chart(document.getElementById('gradeChart'), {
+    type: 'bar',
+    data: {
+        labels: ['90-100', '80-89', '70-79', '60-69', '<60'],
+        datasets: [{
+            label: 'Alumnos',
+            data: [6, 8, 1, 0, 0],
+            backgroundColor: ['#28a745','#17a2b8','#ffc107','#fd7e14','#dc3545'],
+            borderRadius: 8,
+            borderSkipped: false
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: ctx => ` ${ctx.raw} alumno${ctx.raw !== 1 ? 's' : ''}`
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: { stepSize: 1, font: { size: 12 } },
+                title: { display: true, text: 'Nº de alumnos', font: { size: 12 } }
+            },
+            x: { ticks: { font: { size: 12 } } }
+        }
+    }
+});
+</script>
+</body>
+</html>

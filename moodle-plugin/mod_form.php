@@ -1,0 +1,120 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+
+defined('MOODLE_INTERNAL') || die();
+
+require_once($CFG->dirroot.'/course/moodleform_mod.php');
+
+/**
+ * Formulario de configuración del módulo
+ */
+class mod_aiassignment_mod_form extends moodleform_mod {
+
+    /**
+     * Define el formulario
+     */
+    public function definition() {
+        global $CFG;
+
+        $mform = $this->_form;
+
+        // Sección general
+        $mform->addElement('header', 'general', get_string('general', 'form'));
+
+        // Nombre de la actividad
+        $mform->addElement('text', 'name', get_string('assignmentname', 'aiassignment'), array('size' => '64'));
+        if (!empty($CFG->formatstringstriptags)) {
+            $mform->setType('name', PARAM_TEXT);
+        } else {
+            $mform->setType('name', PARAM_CLEANHTML);
+        }
+        $mform->addRule('name', null, 'required', null, 'client');
+        $mform->addRule('name', get_string('maximumchars', '', 255), 'maxlength', 255, 'client');
+
+        // Descripción (intro estándar de Moodle)
+        $this->standard_intro_elements();
+
+        // Tipo de problema
+        $mform->addElement('header', 'problemsettings', get_string('problemsettings', 'aiassignment'));
+        
+        $types = array(
+            'math' => get_string('math', 'aiassignment'),
+            'programming' => get_string('programming', 'aiassignment')
+        );
+        $mform->addElement('select', 'type', get_string('problemtype', 'aiassignment'), $types);
+        $mform->setType('type', PARAM_ALPHA);
+        $mform->setDefault('type', 'math');
+        $mform->addRule('type', null, 'required', null, 'client');
+        $mform->addHelpButton('type', 'problemtype', 'aiassignment');
+
+        // Solución de referencia
+        $mform->addElement('textarea', 'solution', get_string('solution', 'aiassignment'),
+            'wrap="virtual" rows="10" cols="80"');
+        $mform->setType('solution', PARAM_RAW);
+        $mform->addRule('solution', null, 'required', null, 'client');
+        $mform->addHelpButton('solution', 'solution', 'aiassignment');
+
+        // Documentación adicional
+        $mform->addElement('textarea', 'documentation', get_string('documentation', 'aiassignment'),
+            'wrap="virtual" rows="5" cols="80"');
+        $mform->setType('documentation', PARAM_RAW);
+        $mform->addHelpButton('documentation', 'documentation', 'aiassignment');
+
+        // Casos de prueba
+        $mform->addElement('textarea', 'test_cases', get_string('testcases', 'aiassignment'),
+            'wrap="virtual" rows="5" cols="80"');
+        $mform->setType('test_cases', PARAM_RAW);
+        $mform->addHelpButton('test_cases', 'testcases', 'aiassignment');
+
+        // Configuración de calificación
+        $mform->addElement('header', 'gradesettings', get_string('gradesettings', 'aiassignment'));
+        
+        $this->standard_grading_coursemodule_elements();
+
+        // Configuración de intentos
+        $mform->addElement('text', 'maxattempts', get_string('maxattempts', 'aiassignment'), array('size' => '6'));
+        $mform->setType('maxattempts', PARAM_INT);
+        $mform->setDefault('maxattempts', 0);
+        $mform->addRule('maxattempts', null, 'numeric', null, 'client');
+        $mform->addHelpButton('maxattempts', 'maxattempts', 'aiassignment');
+
+        // Elementos estándar
+        $this->standard_coursemodule_elements();
+
+        // Botones
+        $this->add_action_buttons();
+    }
+
+    /**
+     * Validación personalizada del formulario
+     *
+     * @param array $data
+     * @param array $files
+     * @return array errores
+     */
+    public function validation($data, $files) {
+        $errors = parent::validation($data, $files);
+
+        // Validar nombre (evitar solo espacios en blanco).
+        if (isset($data['name']) && trim($data['name']) === '') {
+            $errors['name'] = get_string('required');
+        }
+
+        // Validar solución de referencia.
+        if (empty(trim($data['solution']))) {
+            $errors['solution'] = get_string('required');
+        }
+
+        // Validar tipo de problema (debe estar seleccionado).
+        if (empty($data['type'])) {
+            $errors['type'] = get_string('required');
+        }
+
+        // Validar intentos máximos (entero >= 0).
+        if ($data['maxattempts'] !== '' && isset($data['maxattempts']) && $data['maxattempts'] < 0) {
+            $errors['maxattempts'] = get_string('err_numeric', 'form');
+        }
+
+        return $errors;
+    }
+}

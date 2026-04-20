@@ -1,0 +1,48 @@
+{
+  "name": "sistema-evaluacion-tareas-ia",
+  "version": "2.0.0",
+  "description": "Sistema de evaluación automática de código con IA y detección de plagio - Proyecto de Tesis",
+  "main": "demo-standalone/server.js",
+  "scripts": {
+    "start": "node demo-standalone/server.js",
+    "demo": "node demo-standalone/server-demo.js",
+    "dev": "nodemon demo-standalone/server.js",
+    "simple": "node demo-standalone/server-simple.js",
+    "create-zip": "node scripts/crear-zip-plugin.bat",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "tesis",
+    "evaluacion",
+    "ia",
+    "programacion",
+    "plagio",
+    "moodle",
+    "educacion",
+    "deteccion-plagio"
+  ],
+  "author": "Proyecto de Tesis",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/usuario/proyecto-tesis-plagio-ia"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.23.0",
+    "acorn": "^8.11.0",
+    "axios": "^1.13.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "esprima": "^4.0.1",
+    "express": "^4.18.2",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "docx": "^9.6.1",
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

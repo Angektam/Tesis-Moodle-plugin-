@@ -1,0 +1,195 @@
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║   SISTEMA DE EVALUACIÓN DE TAREAS CON IA                   ║
+║   + DETECCIÓN DE PLAGIO 🆕                                  ║
+║   Plugin para Moodle + Servidor Standalone                  ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+
+🚀 INSTALACIÓN RÁPIDA DEL PLUGIN EN MOODLE (10 MINUTOS)
+
+1. Crear ZIP del plugin:
+   
+   Windows:
+   > scripts\crear-zip-plugin.bat
+   
+   Linux/Mac:
+   $ ./scripts/crear-zip-plugin.sh
+
+2. Instalar en Moodle:
+   - Site administration → Plugins → Install plugins
+   - Sube dist/aiassignment.zip
+   - Actualiza base de datos
+   - Configura tu OpenAI API Key
+
+📖 Documentación: docs/instalacion/INSTALACION_RAPIDA.md
+
+═══════════════════════════════════════════════════════════════
+
+🧪 PROBAR SIN INSTALAR MOODLE (5 MINUTOS)
+
+Si quieres probar el evaluador de IA sin instalar Moodle:
+
+1. Configurar API Key:
+   > cp .env.example .env
+   (Edita .env con tu OPENAI_API_KEY)
+
+2. Instalar dependencias:
+   > npm install
+
+3. Probar:
+   > npm run demo
+
+4. Abrir navegador:
+   http://localhost:5000
+
+📖 Documentación: demo-standalone/README.md
+
+═══════════════════════════════════════════════════════════════
+
+🌐 SERVIDOR WEB STANDALONE (10 MINUTOS)
+
+Para usar el sistema sin Moodle:
+
+1. Instalar dependencias:
+   > npm install
+
+2. Configurar:
+   > cp .env.example .env
+   (Edita .env con tu OPENAI_API_KEY)
+
+3. Iniciar:
+   > npm start
+
+4. Acceder:
+   http://localhost:5000
+
+📖 Documentación: demo-standalone/README.md
+
+═══════════════════════════════════════════════════════════════
+
+📚 GUÍAS DISPONIBLES
+
+⭐ docs/instalacion/COMO_EMPEZAR.md
+   → Elegir entre las 3 opciones disponibles
+
+⭐ docs/instalacion/INSTALACION_RAPIDA.md
+   → Instalar plugin en Moodle (10 min)
+
+📘 moodle-plugin/INSTALACION_DESDE_INTERFAZ.md
+   → Instalación detallada desde interfaz de Moodle
+
+📘 docs/instalacion/GUIA_INSTALACION_MOODLE_LOCAL.md
+   → Instalar Moodle localmente (si no lo tienes)
+
+📘 demo-standalone/README.md
+   → Probar evaluador sin Moodle (5 min)
+
+📘 moodle-plugin/MANUAL_USUARIO.md
+   → Cómo usar el plugin
+
+📘 docs/INDICE_DOCUMENTACION.md
+   → Índice completo de toda la documentación
+
+═══════════════════════════════════════════════════════════════
+
+🎯 ¿QUÉ OPCIÓN ELEGIR?
+
+┌─────────────────────────────────────────────────────────────┐
+│ PARA PROBAR RÁPIDO (5 min)                                 │
+│ → npm run demo                                              │
+│   No necesitas Moodle, solo Node.js                        │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│ PARA INSTALAR EN MOODLE EXISTENTE (10 min)                │
+│ → scripts/crear-zip-plugin + Instalar desde interfaz      │
+│   Método más fácil, no requiere SSH/FTP                    │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│ PARA USAR SIN MOODLE (10 min)                             │
+│ → npm start                                                 │
+│   Sistema web independiente                                 │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│ PARA INSTALAR MOODLE LOCAL (30-60 min)                    │
+│ → docs/instalacion/GUIA_INSTALACION_MOODLE_LOCAL.md       │
+│   Si no tienes Moodle instalado                            │
+└─────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════
+
+📦 ESTRUCTURA DEL PROYECTO
+
+proyecto-tesis-plagio-ia/
+├── docs/                   📚 Documentación completa
+│   ├── tesis/             Documentos de tesis
+│   ├── instalacion/       Guías de instalación
+│   ├── usuario/           Manuales de usuario
+│   └── tecnica/           Documentación técnica
+├── moodle-plugin/          🔌 Plugin para Moodle
+├── entrenamiento-ia/       🧠 Sistema de entrenamiento IA
+├── demo-standalone/        🎮 Aplicación demo independiente
+├── scripts/                🛠️ Scripts de utilidad
+├── dist/                   📦 Archivos compilados
+├── .env                    ⚙️ Configuración
+├── package.json            📋 Dependencias
+├── README.md              📖 Documentación principal
+└── LEEME.txt              👋 Este archivo
+
+═══════════════════════════════════════════════════════════════
+
+✨ CARACTERÍSTICAS
+
+✅ Evaluación automática con IA (OpenAI)
+✅ Soporte para problemas de programación y matemáticas
+✅ Feedback detallado y constructivo
+✅ Scores automáticos (0-100)
+✅ Detección de plagio con IA 🆕
+✅ Análisis semántico de código 🆕
+✅ Reportes de similitud completos 🆕
+✅ Interfaz moderna y responsive
+✅ 3 formas de uso: Plugin Moodle, Servidor Web, Pruebas
+
+═══════════════════════════════════════════════════════════════
+
+🆘 AYUDA RÁPIDA
+
+Problema: "No tengo API Key de OpenAI"
+→ Obtén una en: https://platform.openai.com/api-keys
+
+Problema: "No tengo Moodle instalado"
+→ Opción 1: Usa test-environment/ para probar
+→ Opción 2: Instala Bitnami Moodle Stack (30 min)
+→ Opción 3: Usa el servidor standalone
+
+Problema: "El plugin no se instala"
+→ Revisa: moodle-plugin/INSTALACION_DESDE_INTERFAZ.md
+→ Sección "Solución de Problemas"
+
+Problema: "Quiero probar sin instalar nada"
+→ cd test-environment
+→ php demo-visual.php
+
+═══════════════════════════════════════════════════════════════
+
+🎓 SIGUIENTE PASO
+
+Lee: docs/instalacion/COMO_EMPEZAR.md
+
+O directamente:
+
+Para probar rápido:
+> npm run demo
+(Abre http://localhost:5000)
+
+Para instalar en Moodle:
+> scripts\crear-zip-plugin.bat  (Windows)
+> ./scripts/crear-zip-plugin.sh (Linux/Mac)
+(Luego instala dist/aiassignment.zip en Moodle)
+
+═══════════════════════════════════════════════════════════════
+
+¡Buena suerte! 🚀

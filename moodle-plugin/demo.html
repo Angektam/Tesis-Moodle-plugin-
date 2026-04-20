@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo - AI Assignment Plugin para Moodle</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #0f6cbf 0%, #1a8cff 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px 8px 0 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header p {
+            opacity: 0.95;
+            font-size: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #e8e8e8;
+            border-bottom: 2px solid #ddd;
+        }
+        
+        .tab {
+            padding: 15px 30px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .tab:hover {
+            background: #d8d8d8;
+            transform: translateY(-2px);
+        }
+        
+        .tab.active {
+            background: white;
+            border-bottom: 3px solid #0f6cbf;
+            font-weight: 600;
+        }
+        
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #0f6cbf, #1a8cff);
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: scaleX(0); }
+            to { transform: scaleX(1); }
+        }
+        
+        .content {
+            padding: 30px;
+            display: none;
+            animation: fadeIn 0.4s ease-in;
+        }
+        
+        .content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .form-group textarea {
+            min-height: 120px;
+            font-family: monospace;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #0f6cbf 0%, #1a8cff 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #0d5aa6 0%, #1578e6 100%);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #5cb85c 0%, #4cae4c 100%);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: linear-gradient(135deg, #4cae4c 0%, #3d9c3d 100%);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #d9534f 0%, #c9302c 100%);
+            color: white;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .box h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .submission {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .submission-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .grade {
+            font-size: 32px;
+            font-weight: bold;
+            color: #0f6cbf;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0f6cbf, #1a8cff);
+            transition: width 0.5s;
+        }
+        
+        .feedback-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .analysis-box {
+            background: #e7f3ff;
+            border: 1px solid #0f6cbf;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-card h4 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .number {
+            font-size: 36px;
+            font-weight: bold;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        table th,
+        table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        
+        table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .help-text {
+            font-size: 13px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .field-error {
+            border-color: #dc3545;
+            background-color: #f8d7da;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-robot"></i> AI Assignment - Plugin para Moodle</h1>
+            <p><i class="fas fa-graduation-cap"></i> Demo interactivo del sistema de evaluación con IA + Detección de Plagio</p>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" data-tab="teacher" onclick="showTab('teacher', this)"><i class="fas fa-chalkboard-teacher"></i> Vista Profesor</button>
+            <button class="tab" data-tab="student" onclick="showTab('student', this)"><i class="fas fa-user-graduate"></i> Vista Estudiante</button>
+            <button class="tab" data-tab="results" onclick="showTab('results', this)"><i class="fas fa-chart-line"></i> Resultados</button>
+            <button class="tab" data-tab="plagiarism" onclick="showTab('plagiarism', this)"><i class="fas fa-shield-alt"></i> Detección de Plagio</button>
+            <button class="tab" data-tab="admin" onclick="showTab('admin', this)"><i class="fas fa-cog"></i> Configuración</button>
+        </div>
+        
+        <!-- Vista Profesor -->
+        <div id="teacher" class="content active">
+            <h2><i class="fas fa-chalkboard-teacher"></i> Crear Nueva Tarea con IA</h2>
+            <p style="color: #666; margin-bottom: 20px;">Configure una tarea que será evaluada automáticamente por IA</p>
+            
+            <div class="form-group">
+                <label for="taskName">Nombre de la tarea *</label>
+                <input id="taskName" name="taskName" type="text" value="Resolver Ecuación Cuadrática" placeholder="Ej: Resolver Ecuación Cuadrática" required maxlength="255">
+            </div>
+            
+            <div class="form-group">
+                <label>Descripción</label>
+                <textarea placeholder="Instrucciones para los estudiantes...">Resuelve la siguiente ecuación cuadrática:
+x² - 5x + 6 = 0
+
+Muestra todos los pasos de tu solución.</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="taskType">Tipo de problema *</label>
+                <select id="taskType" name="taskType" required>
+                    <option value="">Seleccione una opción</option>
+                    <option value="math">Matemáticas</option>
+                    <option value="programming">Programación</option>
+                </select>
+                <div class="help-text">Seleccione el tipo de problema para optimizar la evaluación de IA</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="referenceSolution">Solución de referencia * 💡</label>
+                <textarea id="referenceSolution" name="referenceSolution" placeholder="La solución correcta que usará la IA para comparar..." required>x² - 5x + 6 = 0
+Factorizando: (x - 2)(x - 3) = 0
+Por lo tanto: x = 2 o x = 3
+
+Verificación:
+Para x = 2: (2)² - 5(2) + 6 = 4 - 10 + 6 = 0 ✓
+Para x = 3: (3)² - 5(3) + 6 = 9 - 15 + 6 = 0 ✓</textarea>
+                <div class="help-text">Esta solución será usada por la IA para comparar las respuestas de los estudiantes</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="additionalDocs">Documentación adicional</label>
+                <textarea id="additionalDocs" name="additionalDocs" placeholder="Información adicional opcional...">Recuerda que puedes usar:
+- Fórmula general: x = (-b ± √(b²-4ac)) / 2a
+- Factorización
+- Completar el cuadrado</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="testCases">Casos de prueba</label>
+                <textarea id="testCases" name="testCases" placeholder="Ejemplos o casos de prueba...">Verifica tus soluciones sustituyendo en la ecuación original:
+- Si x = 2: (2)² - 5(2) + 6 = 0 ✓
+- Si x = 3: (3)² - 5(3) + 6 = 0 ✓</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="maxGrade">Calificación máxima *</label>
+                <input id="maxGrade" name="maxGrade" type="number" value="100" min="1" max="100" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="maxAttempts">Intentos máximos</label>
+                <input id="maxAttempts" name="maxAttempts" type="number" value="3" min="0">
+                <div class="help-text">0 = intentos ilimitados</div>
+            </div>
+            
+            <button class="btn btn-primary" type="button" onclick="saveTeacherTask()">
+                <i class="fas fa-save"></i> Guardar y mostrar
+            </button>
+        </div>
+        
+        <!-- Vista Estudiante -->
+        <div id="student" class="content">
+            <h2><i class="fas fa-user-graduate"></i> Resolver Ecuación Cuadrática</h2>
+            
+            <div class="box">
+                <h3>📝 Descripción del Problema</h3>
+                <p><strong>Tipo:</strong> Matemáticas</p>
+                <p style="margin-top: 15px;">Resuelve la siguiente ecuación cuadrática:<br>
+                <strong style="font-size: 18px;">x² - 5x + 6 = 0</strong></p>
+                <p style="margin-top: 10px;">Muestra todos los pasos de tu solución.</p>
+            </div>
+            
+            <div class="box">
+                <h3>📚 Documentación</h3>
+                <pre style="background: white; padding: 10px; border-radius: 4px;">Recuerda que puedes usar:
+- Fórmula general: x = (-b ± √(b²-4ac)) / 2a
+- Factorización
+- Completar el cuadrado</pre>
+            </div>
+            
+            <div class="box">
+                <h3>✅ Casos de Prueba</h3>
+                <pre style="background: white; padding: 10px; border-radius: 4px;">Verifica tus soluciones sustituyendo en la ecuación original:
+- Si x = 2: (2)² - 5(2) + 6 = 0 ✓
+- Si x = 3: (3)² - 5(3) + 6 = 0 ✓</pre>
+            </div>
+            
+            <div class="alert alert-info">
+                <strong>ℹ️ Intentos restantes: 3</strong>
+            </div>
+            
+            <div class="form-group">
+                <label for="studentAnswer">Tu respuesta *</label>
+                <textarea id="studentAnswer" name="studentAnswer" placeholder="Escribe tu solución aquí..." required maxlength="4000"></textarea>
+            </div>
+            
+            <button class="btn btn-success" onclick="submitAnswer()">
+                <i class="fas fa-paper-plane"></i> Enviar Respuesta
+            </button>
+        </div>
+        
+        <!-- Resultados -->
+        <div id="results" class="content">
+            <h2><i class="fas fa-chart-line"></i> Tus Envíos</h2>
+            
+            <div class="alert alert-success">
+                ✅ Tu respuesta ha sido enviada y evaluada automáticamente
+            </div>
+            
+            <div class="submission">
+                <div class="submission-header">
+                    <div>
+                        <h3>Envío #1</h3>
+                        <p style="color: #666;">Enviado: 6 de febrero de 2026, 10:30 AM</p>
+                    </div>
+                    <div class="grade">85%</div>
+                </div>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 85%"></div>
+                </div>
+                
+                <div class="feedback-box">
+                    <h4 style="margin-bottom: 10px;">📝 Retroalimentación de IA</h4>
+                    <p>Tu solución es correcta. Has identificado correctamente las raíces x=2 y x=3. El método de factorización está bien aplicado. Podrías mejorar mostrando la verificación de las soluciones sustituyendo en la ecuación original.</p>
+                </div>
+                
+                <div class="analysis-box">
+                    <h4 style="margin-bottom: 10px;">🔍 Análisis Detallado</h4>
+                    <p><strong>Aspectos Positivos:</strong></p>
+                    <ul style="margin: 10px 0 10px 20px;">
+                        <li>Identificación correcta de las raíces</li>
+                        <li>Uso apropiado del método de factorización</li>
+                        <li>Presentación clara de los pasos</li>
+                    </ul>
+                    <p><strong>Áreas de Mejora:</strong></p>
+                    <ul style="margin: 10px 0 10px 20px;">
+                        <li>Agregar verificación sustituyendo en la ecuación original</li>
+                        <li>Mencionar que estas son las únicas soluciones reales</li>
+                    </ul>
+                </div>
+                
+                <p style="margin-top: 15px;"><strong>Tu respuesta:</strong></p>
+                <pre style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin-top: 10px;">x² - 5x + 6 = 0
+Factorizando: (x - 2)(x - 3) = 0
+x - 2 = 0  →  x = 2
+x - 3 = 0  →  x = 3
+Las soluciones son x = 2 y x = 3</pre>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <h4>Calificación</h4>
+                    <div class="number">85%</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <h4>Intentos Usados</h4>
+                    <div class="number">1/3</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                    <h4>Tiempo</h4>
+                    <div class="number">15m</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Detección de Plagio -->
+        <div id="plagiarism" class="content">
+            <h2><i class="fas fa-shield-alt"></i> Detección de Plagio con IA</h2>
+            <p style="color: #666; margin-bottom: 20px;">Análisis semántico avanzado para detectar similitudes entre envíos</p>
+
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> <strong>Análisis completado:</strong> Se encontraron 3 pares de envíos con alta similitud
+            </div>
+
+            <div class="stats">
+                <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <h4><i class="fas fa-users"></i> Total de Envíos</h4>
+                    <div class="number">24</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                    <h4><i class="fas fa-exclamation-triangle"></i> Pares Sospechosos</h4>
+                    <div class="number">3</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+                    <h4><i class="fas fa-percentage"></i> Similitud Promedio</h4>
+                    <div class="number">28%</div>
+                </div>
+            </div>
+
+            <!-- Pares con alta similitud -->
+            <div class="box" style="margin-top: 30px;">
+                <h3><i class="fas fa-copy"></i> Pares con Alta Similitud</h3>
+
+                <!-- Par 1: Alto -->
+                <div class="submission" style="border-left: 4px solid #dc3545;">
+                    <div class="submission-header">
+                        <div>
+                            <h4 style="color: #dc3545;"><i class="fas fa-exclamation-circle"></i> Similitud Alta: 87%</h4>
+                            <p style="color: #666; margin-top: 5px;">
+                                <strong>Estudiante A:</strong> Juan Pérez &nbsp;|&nbsp;
+                                <strong>Estudiante B:</strong> María García
+                            </p>
+                        </div>
+                        <button class="btn btn-danger" onclick="toggleDetail('detail-1', this)">
+                            <i class="fas fa-search"></i> Ver Detalles
+                        </button>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 87%; background: linear-gradient(90deg, #dc3545, #ff6b6b);"></div>
+                    </div>
+                    <div id="detail-1" style="display:none; margin-top:15px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px;">
+                            <div>
+                                <p style="font-weight: 600; margin-bottom: 10px;"><i class="fas fa-user"></i> Envío de Juan Pérez</p>
+                                <pre style="background: #fff3cd; padding: 15px; border-radius: 4px; font-size: 13px; border-left: 3px solid #ffc107;">def factorial(n):
+    if n == 0:
+        return 1
+    return n * factorial(n - 1)</pre>
+                            </div>
+                            <div>
+                                <p style="font-weight: 600; margin-bottom: 10px;"><i class="fas fa-user"></i> Envío de María García</p>
+                                <pre style="background: #fff3cd; padding: 15px; border-radius: 4px; font-size: 13px; border-left: 3px solid #ffc107;">def factorial(num):
+    if num == 0:
+        return 1
+    return num * factorial(num - 1)</pre>
+                            </div>
+                        </div>
+                        <div class="analysis-box" style="margin-top: 15px;">
+                            <h4><i class="fas fa-brain"></i> Análisis de IA</h4>
+                            <p><strong>Similitud Semántica:</strong> 92% — Estructura idéntica con cambios mínimos en nombres de variables</p>
+                            <p><strong>Similitud Estructural:</strong> 95% — Misma lógica y flujo de control</p>
+                            <p><strong>Similitud Léxica:</strong> 75% — Palabras clave y sintaxis muy similares</p>
+                            <p style="margin-top: 10px; color: #dc3545;"><i class="fas fa-flag"></i> <strong>Conclusión:</strong> Alta probabilidad de plagio. Se recomienda revisión manual.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Par 2: Medio -->
+                <div class="submission" style="border-left: 4px solid #ffc107;">
+                    <div class="submission-header">
+                        <div>
+                            <h4 style="color: #856404;"><i class="fas fa-exclamation-triangle"></i> Similitud Media: 65%</h4>
+                            <p style="color: #666; margin-top: 5px;">
+                                <strong>Estudiante A:</strong> Carlos López &nbsp;|&nbsp;
+                                <strong>Estudiante B:</strong> Ana Martínez
+                            </p>
+                        </div>
+                        <button class="btn btn-primary" onclick="toggleDetail('detail-2', this)">
+                            <i class="fas fa-search"></i> Ver Detalles
+                        </button>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 65%; background: linear-gradient(90deg, #ffc107, #ffdb4d);"></div>
+                    </div>
+                    <div id="detail-2" style="display:none; margin-top:15px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px;">
+                            <div>
+                                <p style="font-weight: 600; margin-bottom: 10px;"><i class="fas fa-user"></i> Envío de Carlos López</p>
+                                <pre style="background: #fff3cd; padding: 15px; border-radius: 4px; font-size: 13px; border-left: 3px solid #ffc107;">def calc_factorial(n):
+    result = 1
+    for i in range(1, n+1):
+        result *= i
+    return result</pre>
+                            </div>
+                            <div>
+                                <p style="font-weight: 600; margin-bottom: 10px;"><i class="fas fa-user"></i> Envío de Ana Martínez</p>
+                                <pre style="background: #fff3cd; padding: 15px; border-radius: 4px; font-size: 13px; border-left: 3px solid #ffc107;">def factorial_iter(num):
+    total = 1
+    for x in range(1, num+1):
+        total = total * x
+    return total</pre>
+                            </div>
+                        </div>
+                        <div class="analysis-box" style="margin-top: 15px;">
+                            <h4><i class="fas fa-brain"></i> Análisis de IA</h4>
+                            <p><strong>Similitud Semántica:</strong> 68% — Mismo enfoque iterativo con variables renombradas</p>
+                            <p><strong>Similitud Estructural:</strong> 70% — Estructura de bucle idéntica</p>
+                            <p style="margin-top: 10px; color: #856404;"><i class="fas fa-exclamation-triangle"></i> <strong>Conclusión:</strong> Similitud moderada. Puede ser coincidencia por enfoque común.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Par 3: Bajo -->
+                <div class="submission" style="border-left: 4px solid #28a745;">
+                    <div class="submission-header">
+                        <div>
+                            <h4 style="color: #28a745;"><i class="fas fa-check-circle"></i> Similitud Baja: 32%</h4>
+                            <p style="color: #666; margin-top: 5px;">
+                                <strong>Estudiante A:</strong> Pedro Sánchez &nbsp;|&nbsp;
+                                <strong>Estudiante B:</strong> Laura Rodríguez
+                            </p>
+                        </div>
+                        <button class="btn btn-success" onclick="toggleDetail('detail-3', this)">
+                            <i class="fas fa-search"></i> Ver Detalles
+                        </button>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 32%; background: linear-gradient(90deg, #28a745, #5cb85c);"></div>
+                    </div>
+                    <div id="detail-3" style="display:none; margin-top:15px;">
+                        <p style="color: #666;"><i class="fas fa-check"></i> Similitud dentro del rango normal. Los trabajos presentan enfoques distintos y son considerados originales.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Distribución -->
+            <div class="box" style="margin-top: 20px;">
+                <h3><i class="fas fa-chart-pie"></i> Distribución de Similitudes</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px;">
+                    <div style="text-align: center; padding: 20px; background: #d4edda; border-radius: 8px;">
+                        <div style="font-size: 32px; font-weight: bold; color: #155724;">18</div>
+                        <div style="color: #155724; margin-top: 5px;">Baja (0–40%)</div>
+                    </div>
+                    <div style="text-align: center; padding: 20px; background: #fff3cd; border-radius: 8px;">
+                        <div style="font-size: 32px; font-weight: bold; color: #856404;">3</div>
+                        <div style="color: #856404; margin-top: 5px;">Media (41–70%)</div>
+                    </div>
+                    <div style="text-align: center; padding: 20px; background: #f8d7da; border-radius: 8px;">
+                        <div style="font-size: 32px; font-weight: bold; color: #721c24;">3</div>
+                        <div style="color: #721c24; margin-top: 5px;">Alta (71–100%)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Ranking de alumnos por % de plagio ── -->
+            <div class="box" style="margin-top: 20px;">
+                <h3><i class="fas fa-sort-amount-down"></i> Ranking de Alumnos por Porcentaje de Plagio</h3>
+                <p style="color: #666; margin-bottom: 16px;">Listado ordenado de mayor a menor porcentaje de similitud detectada.</p>
+                <table id="plagiarism-ranking">
+                    <thead>
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th>Alumno</th>
+                            <th style="width:220px;">% de Plagio</th>
+                            <th style="width:130px;">Nivel de Riesgo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ranking-body">
+                        <!-- generado por JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top: 20px; text-align: center;">
+                <button class="btn btn-primary" onclick="exportRankingCSV()">
+                    <i class="fas fa-file-csv"></i> Exportar CSV
+                </button>
+                <button class="btn btn-success" onclick="runNewAnalysis()">
+                    <i class="fas fa-sync-alt"></i> Ejecutar Nuevo Análisis
+                </button>
+            </div>
+        </div>
+        
+        <!-- Configuración Admin -->
+        <div id="admin" class="content">
+            <h2><i class="fas fa-cog"></i> Configuración del Plugin</h2>
+            <p style="color: #666; margin-bottom: 20px;">Configure las opciones globales de AI Assignment</p>
+            
+            <div class="box">
+                <h3>🔑 Configuración de OpenAI</h3>
+                
+                <div class="form-group">
+                    <label for="openaiKey">Clave API de OpenAI *</label>
+                    <input id="openaiKey" name="openaiKey" type="password" value="sk-proj-••••••••••••••••••••••••••••••••••••••••" placeholder="sk-proj-..." required>
+                    <div class="help-text">Ingrese su clave API de OpenAI para la evaluación automática. Obténgala en https://platform.openai.com/api-keys</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="openaiModel">Modelo de OpenAI</label>
+                    <select id="openaiModel" name="openaiModel" required>
+                        <option value="gpt-4o-mini" selected>gpt-4o-mini (Recomendado)</option>
+                        <option value="gpt-4o">gpt-4o</option>
+                        <option value="gpt-4-turbo">gpt-4-turbo</option>
+                        <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+                    </select>
+                    <div class="help-text">Seleccione el modelo de OpenAI a usar. gpt-4o-mini ofrece el mejor balance entre costo y calidad.</div>
+                </div>
+                
+                <button class="btn btn-primary" type="button" onclick="saveAdminConfig()">
+                    <i class="fas fa-check"></i> Guardar cambios
+                </button>
+            </div>
+            
+            <div class="box" style="margin-top: 20px;">
+                <h3>📊 Estadísticas de Uso</h3>
+                <table>
+                    <tr>
+                        <th>Métrica</th>
+                        <th>Valor</th>
+                    </tr>
+                    <tr>
+                        <td>Total de tareas creadas</td>
+                        <td><strong>24</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Total de envíos evaluados</td>
+                        <td><strong>156</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Promedio de calificación</td>
+                        <td><strong>82.5%</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Llamadas a API este mes</td>
+                        <td><strong>312</strong></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div style="max-width: 1200px; margin: 20px auto; text-align: center; color: white;">
+        <p style="opacity: 0.9;">
+            <i class="fas fa-graduation-cap"></i> Proyecto de Tesis - Sistema de Evaluación con IA + Detección de Plagio
+        </p>
+        <p style="opacity: 0.8; font-size: 14px; margin-top: 10px;">
+            <i class="fas fa-code"></i> Desarrollado con OpenAI GPT-4o-mini | 
+            <i class="fas fa-plug"></i> Plugin para Moodle 4.0+ | 
+            <i class="fas fa-shield-alt"></i> Detección de Plagio con IA
+        </p>
+    </div>
+    
+    <script>
+        function showTab(tabName, tabElement) {
+            // Ocultar todos los contenidos
+            const contents = document.querySelectorAll('.content');
+            contents.forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Desactivar todas las tabs
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Mostrar el contenido seleccionado
+            setTimeout(() => {
+                const targetContent = document.getElementById(tabName);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                }
+            }, 50);
+            
+            // Activar la tab seleccionada
+            if (tabElement) {
+                tabElement.classList.add('active');
+            } else {
+                const fallbackTab = document.querySelector(`.tab[data-tab="${tabName}"]`);
+                if (fallbackTab) {
+                    fallbackTab.classList.add('active');
+                }
+            }
+        }
+        
+        function submitAnswer() {
+            const answerField = document.getElementById('studentAnswer');
+            const answer = answerField ? answerField.value : '';
+            
+            if (!answer.trim()) {
+                showNotification('⚠️ Por favor escribe tu respuesta antes de enviar', 'warning');
+                if (answerField) {
+                    answerField.classList.add('field-error');
+                }
+                return;
+            }
+            
+            if (answerField) {
+                answerField.classList.remove('field-error');
+            }
+            
+            // Mostrar notificación de envío
+            showNotification('✅ Tu respuesta ha sido enviada!', 'success');
+            
+            // Simular evaluación
+            setTimeout(() => {
+                showNotification('🤖 La IA está evaluando tu respuesta...', 'info');
+            }, 1000);
+            
+            // Simular cambio a la pestaña de resultados
+            setTimeout(() => {
+                const resultsTab = document.querySelectorAll('.tab')[2];
+                if (resultsTab) {
+                    resultsTab.click();
+                }
+                showNotification('✨ Evaluación completada!', 'success');
+            }, 3000);
+        }
+        
+        function clearFieldErrors() {
+            const errorFields = document.querySelectorAll('.field-error');
+            errorFields.forEach(field => field.classList.remove('field-error'));
+        }
+        
+        function validateTeacherForm() {
+            clearFieldErrors();
+            const errors = [];
+            
+            const nameInput = document.getElementById('taskName');
+            if (nameInput) {
+                const value = nameInput.value.trim();
+                if (!value) {
+                    errors.push('El nombre de la tarea es obligatorio.');
+                    nameInput.classList.add('field-error');
+                } else if (value.length > 255) {
+                    errors.push('El nombre de la tarea no puede superar los 255 caracteres.');
+                    nameInput.classList.add('field-error');
+                }
+            }
+            
+            const typeSelect = document.getElementById('taskType');
+            if (typeSelect && !typeSelect.value) {
+                errors.push('Debe seleccionar el tipo de problema.');
+                typeSelect.classList.add('field-error');
+            }
+            
+            const referenceSolution = document.getElementById('referenceSolution');
+            if (referenceSolution && !referenceSolution.value.trim()) {
+                errors.push('La solución de referencia es obligatoria.');
+                referenceSolution.classList.add('field-error');
+            }
+            
+            const maxGradeInput = document.getElementById('maxGrade');
+            if (maxGradeInput) {
+                const grade = Number(maxGradeInput.value);
+                if (isNaN(grade)) {
+                    errors.push('La calificación máxima debe ser un número.');
+                    maxGradeInput.classList.add('field-error');
+                } else if (grade <= 0 || grade > 100) {
+                    errors.push('La calificación máxima debe estar entre 1 y 100.');
+                    maxGradeInput.classList.add('field-error');
+                }
+            }
+            
+            const maxAttemptsInput = document.getElementById('maxAttempts');
+            if (maxAttemptsInput) {
+                const attemptsRaw = maxAttemptsInput.value.trim();
+                if (attemptsRaw !== '') {
+                    const attempts = Number(attemptsRaw);
+                    if (!Number.isInteger(attempts) || attempts < 0) {
+                        errors.push('Los intentos máximos deben ser un número entero mayor o igual a 0.');
+                        maxAttemptsInput.classList.add('field-error');
+                    }
+                }
+            }
+            
+            if (errors.length) {
+                showNotification('⚠️ Revise los siguientes campos:<br>' + errors.map(e => '• ' + e).join('<br>'), 'warning');
+                return false;
+            }
+            
+            return true;
+        }
+        
+        function saveTeacherTask() {
+            if (!validateTeacherForm()) {
+                return;
+            }
+            
+            showNotification('✅ Tarea creada exitosamente. La configuración es válida para su uso en Moodle.', 'success');
+        }
+        
+        function validateAdminConfig() {
+            clearFieldErrors();
+            const errors = [];
+            
+            const apiKeyInput = document.getElementById('openaiKey');
+            if (apiKeyInput) {
+                const apiKey = apiKeyInput.value.trim();
+                if (!apiKey) {
+                    errors.push('La clave API de OpenAI es obligatoria.');
+                    apiKeyInput.classList.add('field-error');
+                } else if (apiKey.length < 10 && !apiKey.includes('•')) {
+                    errors.push('La clave API de OpenAI no parece válida.');
+                    apiKeyInput.classList.add('field-error');
+                }
+            }
+            
+            const modelSelect = document.getElementById('openaiModel');
+            if (modelSelect && !modelSelect.value) {
+                errors.push('Debe seleccionar un modelo de OpenAI.');
+                modelSelect.classList.add('field-error');
+            }
+            
+            if (errors.length) {
+                showNotification('⚠️ Revise la configuración:<br>' + errors.map(e => '• ' + e).join('<br>'), 'warning');
+                return false;
+            }
+            
+            return true;
+        }
+        
+        function saveAdminConfig() {
+            if (!validateAdminConfig()) {
+                return;
+            }
+            
+            showNotification('✅ Configuración guardada correctamente.', 'success');
+        }
+        
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                min-width: 300px;
+                animation: slideInRight 0.3s ease-out;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            `;
+            notification.innerHTML = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOutRight 0.3s ease-out';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+        
+        // Agregar animaciones CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOutRight {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+            
+            .alert-warning {
+                background: #fff3cd;
+                border: 1px solid #ffc107;
+                color: #856404;
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // ── Toggle detalles de par de plagio ─────────────────────────────
+        function toggleDetail(id, btn) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const isHidden = el.style.display === 'none' || el.style.display === '';
+            el.style.display = isHidden ? 'block' : 'none';
+            btn.innerHTML = isHidden
+                ? '<i class="fas fa-times"></i> Ocultar'
+                : '<i class="fas fa-search"></i> Ver Detalles';
+        }
+
+        // ── Datos del ranking de plagio ───────────────────────────────────
+        const plagiarismData = [
+            { name: 'Juan Pérez',       plagiarism: 87 },
+            { name: 'María García',     plagiarism: 87 },
+            { name: 'Carlos López',     plagiarism: 65 },
+            { name: 'Ana Martínez',     plagiarism: 65 },
+            { name: 'Pedro Sánchez',    plagiarism: 32 },
+            { name: 'Laura Rodríguez',  plagiarism: 32 },
+            { name: 'Sofía Ramírez',    plagiarism: 21 },
+            { name: 'Diego Torres',     plagiarism: 18 },
+            { name: 'Valentina Cruz',   plagiarism: 15 },
+            { name: 'Andrés Morales',   plagiarism: 12 },
+            { name: 'Camila Herrera',   plagiarism: 9  },
+            { name: 'Mateo Jiménez',    plagiarism: 7  },
+        ].sort((a, b) => b.plagiarism - a.plagiarism);
+
+        function getRiskBadge(pct) {
+            if (pct >= 70) return '<span class="badge badge-danger">🔴 Alto</span>';
+            if (pct >= 40) return '<span class="badge badge-warning">🟡 Medio</span>';
+            return '<span class="badge badge-success">🟢 Bajo</span>';
+        }
+
+        function getBarColor(pct) {
+            if (pct >= 70) return '#dc3545';
+            if (pct >= 40) return '#ffc107';
+            return '#28a745';
+        }
+
+        function buildRanking() {
+            const tbody = document.getElementById('ranking-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            plagiarismData.forEach((row, i) => {
+                const color = getBarColor(row.plagiarism);
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align:center; font-weight:600;">${i + 1}</td>
+                    <td>${row.name}</td>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div style="flex:1; height:14px; background:#e9ecef; border-radius:7px; overflow:hidden;">
+                                <div style="width:${row.plagiarism}%; height:100%; background:${color}; border-radius:7px;"></div>
+                            </div>
+                            <strong style="color:${color}; min-width:38px;">${row.plagiarism}%</strong>
+                        </div>
+                    </td>
+                    <td>${getRiskBadge(row.plagiarism)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function exportRankingCSV() {
+            const rows = [['#', 'Alumno', '% Plagio', 'Nivel']];
+            plagiarismData.forEach((r, i) => {
+                const level = r.plagiarism >= 70 ? 'Alto' : r.plagiarism >= 40 ? 'Medio' : 'Bajo';
+                rows.push([i + 1, r.name, r.plagiarism + '%', level]);
+            });
+            const csv = rows.map(r => r.join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'ranking_plagio.csv';
+            a.click();
+            showNotification('✅ CSV exportado correctamente.', 'success');
+        }
+
+        function runNewAnalysis() {
+            showNotification('🔄 Ejecutando nuevo análisis de plagio...', 'info');
+            setTimeout(() => showNotification('✅ Análisis completado. Resultados actualizados.', 'success'), 2500);
+        }
+
+        // Efecto de hover en las tarjetas de estadísticas
+        document.addEventListener('DOMContentLoaded', () => {
+            buildRanking();
+            const statCards = document.querySelectorAll('.stat-card');
+            statCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-5px) scale(1.02)';
+                    this.style.transition = 'all 0.3s ease';
+                });
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

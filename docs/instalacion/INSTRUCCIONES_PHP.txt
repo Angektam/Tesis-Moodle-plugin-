@@ -1,0 +1,47 @@
+╔══════════════════════════════════════════════════════════════╗
+║  INSTRUCCIONES PARA HABILITAR EXTENSIONES DE PHP            ║
+╚══════════════════════════════════════════════════════════════╝
+
+Tu PHP no tiene habilitadas las extensiones necesarias para hacer
+peticiones HTTPS. Necesitas editar el archivo php.ini.
+
+PASOS:
+
+1. Abre el Bloc de notas como ADMINISTRADOR:
+   - Busca "Bloc de notas" en el menú inicio
+   - Click derecho → "Ejecutar como administrador"
+
+2. En el Bloc de notas, abre el archivo:
+   C:\Program Files\php-8.4.13-nts-Win32-vs17-x64\php.ini
+
+3. Busca estas líneas (usa Ctrl+F para buscar):
+   
+   ;extension=openssl
+   ;extension=curl
+
+4. Quita el punto y coma (;) al inicio de cada línea:
+   
+   extension=openssl
+   extension=curl
+
+5. Guarda el archivo (Ctrl+S)
+
+6. Cierra el Bloc de notas
+
+7. Ejecuta nuevamente:
+   php test-plugin.php
+
+═══════════════════════════════════════════════════════════════
+
+ALTERNATIVA: Si no puedes editar php.ini, puedes probar el plugin
+directamente en Moodle:
+
+1. Ejecuta: crear-zip-plugin.bat
+2. Instala Moodle localmente (ver GUIA_INSTALACION_MOODLE_LOCAL.md)
+3. Sube el archivo aiassignment.zip en Moodle
+4. Configura tu API key en Moodle
+
+El plugin funcionará correctamente en Moodle porque Moodle ya tiene
+configurado PHP con todas las extensiones necesarias.
+
+═══════════════════════════════════════════════════════════════

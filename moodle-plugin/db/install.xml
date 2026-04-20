@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="mod/aiassignment/db" VERSION="20260315" COMMENT="XMLDB file for Moodle mod/aiassignment - Unified schema"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+  <TABLES>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         aiassignment  (= "problems" en el esquema standalone)
+         Referencia a course y teacher (user) de Moodle nativo.
+    ════════════════════════════════════════════════════════════ -->
+    <TABLE NAME="aiassignment" COMMENT="Stores AI assignment instances (problems)">
+      <FIELDS>
+        <FIELD NAME="id"           TYPE="int"  LENGTH="10"  NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="course"       TYPE="int"  LENGTH="10"  NOTNULL="true"  DEFAULT="0"    SEQUENCE="false" COMMENT="FK → course.id"/>
+        <FIELD NAME="teacher_id"   TYPE="int"  LENGTH="10"  NOTNULL="true"  DEFAULT="0"    SEQUENCE="false" COMMENT="FK → user.id (creator/teacher)"/>
+        <FIELD NAME="name"         TYPE="char" LENGTH="255" NOTNULL="true"                 SEQUENCE="false" COMMENT="Problem title"/>
+        <FIELD NAME="intro"        TYPE="text"              NOTNULL="false"                SEQUENCE="false" COMMENT="Moodle intro (HTML)"/>
+        <FIELD NAME="introformat"  TYPE="int"  LENGTH="4"   NOTNULL="true"  DEFAULT="0"    SEQUENCE="false"/>
+        <FIELD NAME="description"  TYPE="text"              NOTNULL="false"                SEQUENCE="false" COMMENT="Extended problem description"/>
+        <FIELD NAME="type"         TYPE="char" LENGTH="20"  NOTNULL="true"  DEFAULT="math" SEQUENCE="false" COMMENT="math | programming"/>
+        <FIELD NAME="solution"     TYPE="text"              NOTNULL="true"                 SEQUENCE="false" COMMENT="Reference solution"/>
+        <FIELD NAME="documentation" TYPE="text"             NOTNULL="false"                SEQUENCE="false"/>
+        <FIELD NAME="test_cases"   TYPE="text"              NOTNULL="false"                SEQUENCE="false"/>
+        <FIELD NAME="grade"        TYPE="int"  LENGTH="10"  NOTNULL="true"  DEFAULT="100"  SEQUENCE="false"/>
+        <FIELD NAME="maxattempts"  TYPE="int"  LENGTH="6"   NOTNULL="true"  DEFAULT="0"    SEQUENCE="false" COMMENT="0 = unlimited"/>
+        <FIELD NAME="timecreated"  TYPE="int"  LENGTH="10"  NOTNULL="true"  DEFAULT="0"    SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int"  LENGTH="10"  NOTNULL="true"  DEFAULT="0"    SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"    TYPE="primary" FIELDS="id"/>
+        <KEY NAME="course"     TYPE="foreign" FIELDS="course"     REFTABLE="course" REFFIELDS="id"/>
+        <KEY NAME="teacher_id" TYPE="foreign" FIELDS="teacher_id" REFTABLE="user"   REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="course_teacher"   UNIQUE="false" FIELDS="course, teacher_id"/>
+        <INDEX NAME="type"             UNIQUE="false" FIELDS="type"/>
+        <INDEX NAME="course_idx"       UNIQUE="false" FIELDS="course"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         aiassignment_submissions  (= "submissions" standalone)
+         student_id / userid → user.id (Moodle nativo)
+    ════════════════════════════════════════════════════════════ -->
+    <TABLE NAME="aiassignment_submissions" COMMENT="Stores student submissions">
+      <FIELDS>
+        <FIELD NAME="id"           TYPE="int"    LENGTH="10"  NOTNULL="true"              SEQUENCE="true"/>
+        <FIELD NAME="assignment"   TYPE="int"    LENGTH="10"  NOTNULL="true"  DEFAULT="0" SEQUENCE="false" COMMENT="FK → aiassignment.id"/>
+        <FIELD NAME="userid"       TYPE="int"    LENGTH="10"  NOTNULL="true"  DEFAULT="0" SEQUENCE="false" COMMENT="FK → user.id (student)"/>
+        <FIELD NAME="answer"       TYPE="text"                NOTNULL="true"              SEQUENCE="false"/>
+        <FIELD NAME="status"       TYPE="char"   LENGTH="20"  NOTNULL="true"  DEFAULT="pending" SEQUENCE="false" COMMENT="pending | evaluated | flagged"/>
+        <FIELD NAME="score"        TYPE="number" LENGTH="5"   NOTNULL="false" DECIMALS="2" SEQUENCE="false" COMMENT="0-100"/>
+        <FIELD NAME="feedback"     TYPE="text"                NOTNULL="false"             SEQUENCE="false"/>
+        <FIELD NAME="attempt"      TYPE="int"    LENGTH="6"   NOTNULL="true"  DEFAULT="1" SEQUENCE="false"/>
+        <FIELD NAME="evaluated_at" TYPE="int"    LENGTH="10"  NOTNULL="false"             SEQUENCE="false" COMMENT="Unix timestamp when AI evaluated"/>
+        <FIELD NAME="timecreated"  TYPE="int"    LENGTH="10"  NOTNULL="true"  DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int"    LENGTH="10"  NOTNULL="true"  DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"    TYPE="primary" FIELDS="id"/>
+        <KEY NAME="assignment" TYPE="foreign" FIELDS="assignment" REFTABLE="aiassignment"  REFFIELDS="id"/>
+        <KEY NAME="userid"     TYPE="foreign" FIELDS="userid"     REFTABLE="user"           REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="assignment_userid"    UNIQUE="false" FIELDS="assignment, userid"/>
+        <INDEX NAME="assignment_status"    UNIQUE="false" FIELDS="assignment, status"/>
+        <INDEX NAME="assignment_score"     UNIQUE="false" FIELDS="assignment, score"/>
+        <INDEX NAME="userid_assignment"    UNIQUE="false" FIELDS="userid, assignment"/>
+        <INDEX NAME="status"               UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="score_idx"            UNIQUE="false" FIELDS="score"/>
+        <INDEX NAME="timecreated_idx"      UNIQUE="false" FIELDS="timecreated"/>
+        <INDEX NAME="evaluated_at"         UNIQUE="false" FIELDS="evaluated_at"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         aiassignment_evaluations  (= "evaluations" standalone)
+         Detalle del análisis IA por cada submission.
+    ════════════════════════════════════════════════════════════ -->
+    <TABLE NAME="aiassignment_evaluations" COMMENT="Stores AI evaluation details per submission">
+      <FIELDS>
+        <FIELD NAME="id"               TYPE="int"    LENGTH="10"  NOTNULL="true"              SEQUENCE="true"/>
+        <FIELD NAME="submission"       TYPE="int"    LENGTH="10"  NOTNULL="true"  DEFAULT="0" SEQUENCE="false" COMMENT="FK → aiassignment_submissions.id"/>
+        <FIELD NAME="similarity_score" TYPE="number" LENGTH="5"   NOTNULL="false" DECIMALS="2" SEQUENCE="false" COMMENT="0-100 plagiarism similarity"/>
+        <FIELD NAME="ai_feedback"      TYPE="text"                NOTNULL="false"             SEQUENCE="false" COMMENT="Human-readable AI feedback"/>
+        <FIELD NAME="ai_analysis"      TYPE="text"                NOTNULL="false"             SEQUENCE="false" COMMENT="Raw AI analysis JSON"/>
+        <FIELD NAME="timecreated"      TYPE="int"    LENGTH="10"  NOTNULL="true"  DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"    TYPE="primary" FIELDS="id"/>
+        <KEY NAME="submission" TYPE="foreign" FIELDS="submission" REFTABLE="aiassignment_submissions" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="submission_idx"        UNIQUE="false" FIELDS="submission"/>
+        <INDEX NAME="similarity_score_idx"  UNIQUE="false" FIELDS="similarity_score"/>
+        <INDEX NAME="sim_score_not_null"    UNIQUE="false" FIELDS="submission, similarity_score"/>
+      </INDEXES>
+    </TABLE>
+
+  </TABLES>
+</XMLDB>
