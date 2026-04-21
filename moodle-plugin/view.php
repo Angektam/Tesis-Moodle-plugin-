@@ -376,4 +376,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 ");
 
+// ── Polling de notificaciones en tiempo real ──────────────────
+echo \mod_aiassignment\realtime_notifier::render_polling_script($cm->id, $USER->id);
+
 echo $OUTPUT->footer();

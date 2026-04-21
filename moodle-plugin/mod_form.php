@@ -38,8 +38,12 @@ class mod_aiassignment_mod_form extends moodleform_mod {
         $mform->addElement('header', 'problemsettings', get_string('problemsettings', 'aiassignment'));
         
         $types = array(
-            'math' => get_string('math', 'aiassignment'),
-            'programming' => get_string('programming', 'aiassignment')
+            'math'        => '📐 ' . get_string('math', 'aiassignment'),
+            'programming' => '💻 ' . get_string('programming', 'aiassignment'),
+            'essay'       => '📝 Ensayo / Texto libre',
+            'sql'         => '🗄️ Consulta SQL',
+            'pseudocode'  => '📋 Pseudocódigo / Algoritmo',
+            'debugging'   => '🐛 Depuración de código',
         );
         $mform->addElement('select', 'type', get_string('problemtype', 'aiassignment'), $types);
         $mform->setType('type', PARAM_ALPHA);

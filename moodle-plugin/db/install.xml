@@ -98,5 +98,26 @@
       </INDEXES>
     </TABLE>
 
+    <!-- ═══════════════════════════════════════════════════════════
+         aiassignment_notifications  — Notificaciones en tiempo real
+    ════════════════════════════════════════════════════════════ -->
+    <TABLE NAME="aiassignment_notifications" COMMENT="Real-time notifications for students">
+      <FIELDS>
+        <FIELD NAME="id"          TYPE="int"  LENGTH="10" NOTNULL="true"             SEQUENCE="true"/>
+        <FIELD NAME="userid"      TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="type"        TYPE="char" LENGTH="50" NOTNULL="true"             SEQUENCE="false"/>
+        <FIELD NAME="payload"     TYPE="text"             NOTNULL="false"            SEQUENCE="false"/>
+        <FIELD NAME="seen"        TYPE="int"  LENGTH="1"  NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="userid_seen" UNIQUE="false" FIELDS="userid, seen"/>
+        <INDEX NAME="timecreated" UNIQUE="false" FIELDS="timecreated"/>
+      </INDEXES>
+    </TABLE>
+
   </TABLES>
 </XMLDB>

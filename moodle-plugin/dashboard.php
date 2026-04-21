@@ -62,15 +62,18 @@ echo html_writer::tag('h2',
 echo html_writer::start_div('', ['style' => 'text-align:right; margin-bottom:16px; display:flex; gap:8px; justify-content:flex-end; align-items:center;']);
 $report_url  = new moodle_url('/mod/aiassignment/course_report.php', ['courseid' => $courseid]);
 $thesis_url  = new moodle_url('/mod/aiassignment/thesis_results.php', ['courseid' => $courseid]);
-echo html_writer::link($thesis_url, '🎓 Resultados Tesis', ['class' => 'btn btn-success btn-sm no-print']);
-echo html_writer::link($report_url, '📊 Reporte del Curso', ['class' => 'btn btn-info btn-sm no-print']);
+$export_csv  = new moodle_url('/mod/aiassignment/export_grades.php', ['courseid' => $courseid, 'format' => 'csv']);
+$export_xlsx = new moodle_url('/mod/aiassignment/export_grades.php', ['courseid' => $courseid, 'format' => 'xlsx']);
+$export_pdf  = new moodle_url('/mod/aiassignment/export_grades.php', ['courseid' => $courseid, 'format' => 'pdf']);
+echo html_writer::link($thesis_url,  '🎓 Resultados Tesis',  ['class' => 'btn btn-success btn-sm no-print']);
+echo html_writer::link($report_url,  '📊 Reporte del Curso', ['class' => 'btn btn-info btn-sm no-print']);
+echo html_writer::link($export_csv,  '⬇️ CSV',               ['class' => 'btn btn-outline-secondary btn-sm no-print']);
+echo html_writer::link($export_xlsx, '📗 Excel',             ['class' => 'btn btn-outline-success btn-sm no-print']);
+echo html_writer::link($export_pdf,  '📄 PDF',               ['class' => 'btn btn-outline-danger btn-sm no-print']);
 echo html_writer::tag('button', '🔄 Actualizar',
     ['class' => 'btn btn-secondary btn-sm no-print',
      'onclick' => 'window.location.reload()',
-     'title' => 'Recargar el dashboard para ver datos actualizados',
      'type' => 'button']);
-echo html_writer::tag('button', '📄 Exportar PDF',
-    ['class' => 'btn btn-secondary btn-sm no-print', 'onclick' => 'window.print()', 'type' => 'button']);
 echo html_writer::end_div();
 
 // ── TARJETAS ──────────────────────────────────────────────────

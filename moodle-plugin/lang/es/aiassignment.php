@@ -209,3 +209,28 @@ $string['rubric_breakdown']      = 'Desglose por criterio';
 $string['rubric_total']          = 'Total';
 $string['use_rubric']            = 'Usar rúbrica personalizada';
 $string['rubricsettings']        = 'Rúbrica de evaluación (opcional)';
+
+// ── Mejoras v2.2 — Nuevos tipos, exportación, notificaciones ─────────────
+
+// Nuevos tipos de problemas
+$string['essay']       = 'Ensayo / Texto libre';
+$string['sql']         = 'Consulta SQL';
+$string['pseudocode']  = 'Pseudocódigo / Algoritmo';
+$string['debugging']   = 'Depuración de código';
+
+// Exportación
+$string['export_csv']  = 'Exportar CSV';
+$string['export_xlsx'] = 'Exportar Excel';
+$string['export_pdf']  = 'Exportar PDF';
+$string['export_grades'] = 'Exportar calificaciones';
+
+// Notificaciones en tiempo real
+$string['notif_evaluated_title'] = '✅ Tarea evaluada';
+$string['notif_evaluated_body']  = '{$a->name}: {$a->score}%';
+$string['notif_plagiarism_title']= '🚨 Alerta de plagio';
+$string['notif_resubmit_title']  = '📩 Re-envío solicitado';
+
+// Múltiples archivos
+$string['multifile_label']  = 'Archivos adicionales (opcional)';
+$string['multifile_hint']   = 'Máx. 10 archivos · 2MB c/u';
+$string['multifile_drop']   = 'Arrastra archivos aquí o selecciona';
