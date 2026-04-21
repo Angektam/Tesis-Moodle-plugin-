@@ -139,6 +139,39 @@ if ($submission->status == 'evaluated' && $submission->score !== null) {
         echo html_writer::tag('h4', get_string('feedback', 'aiassignment'));
         echo html_writer::tag('div', s($submission->feedback), array('class' => 'feedback-content'));
     }
+
+    // ── Análisis de complejidad (solo programación) ───────────
+    if ($aiassignment->type === 'programming') {
+        $complexity = \mod_aiassignment\complexity_analyzer::analyze($submission->answer);
+        echo \mod_aiassignment\complexity_analyzer::render($complexity);
+    }
+
+    // ── Resultados de ejecución con Judge0 ────────────────────
+    $evaluation = $DB->get_record('aiassignment_evaluations',
+        array('submission' => $submission->id), '*', IGNORE_MULTIPLE);
+
+    if ($evaluation && !empty($aiassignment->test_cases) && $aiassignment->type === 'programming') {
+        $testcases = \mod_aiassignment\code_executor::parse_testcases($aiassignment->test_cases);
+        if (!empty($testcases)) {
+            // Verificar si ya hay resultados de ejecución guardados
+            $exec_results = null;
+            if ($evaluation->ai_analysis) {
+                $analysis_data = json_decode($evaluation->ai_analysis, true);
+                if (!empty($analysis_data['execution_results'])) {
+                    $exec_results = $analysis_data['execution_results'];
+                }
+            }
+            if ($exec_results === null) {
+                // Detectar lenguaje del código
+                $lang = 'python';
+                if (preg_match('/\bpublic\s+class\b/', $submission->answer)) $lang = 'java';
+                elseif (preg_match('/\bconsole\.log\b/', $submission->answer)) $lang = 'javascript';
+                elseif (preg_match('/\b#include\b/', $submission->answer)) $lang = 'cpp';
+                $exec_results = \mod_aiassignment\code_executor::run($submission->answer, $lang, $testcases);
+            }
+            echo \mod_aiassignment\code_executor::render_results($exec_results);
+        }
+    }
     
     // Análisis detallado de IA
     $evaluation = $DB->get_record('aiassignment_evaluations', 

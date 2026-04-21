@@ -63,11 +63,6 @@ try {
 } catch (Exception $e) {
     // Sin datos de plagio aún
 }
-        $plagiarism_by_user[$rec->userid] = $rec->max_plagiarism;
-    }
-} catch (Exception $e) {
-    // Sin datos de plagio aún
-}
 
 // ── Tabla de envíos ───────────────────────────────────────────────────────
 $table = new html_table();

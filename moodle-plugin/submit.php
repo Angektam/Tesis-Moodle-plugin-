@@ -134,75 +134,108 @@ $event = \mod_aiassignment\event\submission_created::create(array(
 ));
 $event->trigger();
 
-// Evaluar con IA de forma asíncrona (o síncrona para simplicidad)
-try {
-    $evaluation = \mod_aiassignment\ai_evaluator::evaluate(
-        $answer,
-        $aiassignment->solution,
-        $aiassignment->type
-    );
+// ── Detección de código generado por IA ──────────────────────────────────
+if ($aiassignment->type === 'programming') {
+    try {
+        $ai_detection = \mod_aiassignment\ai_detector::detect($answer, $aiassignment->type);
+        if ($ai_detection['score'] >= 70) {
+            // Guardar señal en el feedback para que el profesor la vea
+            $submission->feedback = '[⚠️ POSIBLE IA: ' . $ai_detection['label'] . ' (' .
+                $ai_detection['score'] . '%)] ' . implode('; ', $ai_detection['signals']);
+            $DB->update_record('aiassignment_submissions', $submission);
+        }
+    } catch (Exception $e) {
+        debugging('AI detection failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
+    }
+}
 
-    // Guardar evaluación
-    $evalrecord = new stdClass();
-    $evalrecord->submission = $submission->id;
-    $evalrecord->similarity_score = $evaluation['similarity_score'];
-    $evalrecord->ai_feedback = $evaluation['feedback'];
-    $evalrecord->ai_analysis = $evaluation['analysis'];
-    $evalrecord->timecreated = time();
-    $DB->insert_record('aiassignment_evaluations', $evalrecord);
-
-    // Actualizar submission
-    $submission->status = 'evaluated';
-    $submission->score = $evaluation['similarity_score'];
-    $submission->feedback = $evaluation['feedback'];
-    $submission->timemodified = time();
+// ── Registrar cambios de pestaña (modo examen) ────────────────────────────
+$tab_switches = optional_param('tab_switches', 0, PARAM_INT);
+if ($tab_switches > 0) {
+    $submission->feedback = ($submission->feedback ?? '') .
+        ' [🔒 EXAMEN: ' . $tab_switches . ' cambio(s) de pestaña detectado(s)]';
     $DB->update_record('aiassignment_submissions', $submission);
+}
 
-    // Actualizar calificación en el libro de calificaciones
-    aiassignment_update_grades($aiassignment, $USER->id);
+// ── Evaluar: asíncrono si hay cron, síncrono como fallback ───────────────
+$async_mode = (bool)get_config('mod_aiassignment', 'async_evaluation');
 
-    // Notificar al estudiante que su envío fue evaluado (mejora #3)
-    $message                     = new \core\message\message();
-    $message->component          = 'mod_aiassignment';
-    $message->name               = 'submission_graded';
-    $message->userfrom           = \core_user::get_noreply_user();
-    $message->userto             = $USER;
-    $message->subject            = get_string('notif_graded_subject', 'aiassignment',
-                                       format_string($aiassignment->name));
-    $message->fullmessage        = get_string('notif_graded_body', 'aiassignment', [
-        'assignment' => format_string($aiassignment->name),
-        'score'      => round($evaluation['similarity_score'], 2),
-        'feedback'   => $evaluation['feedback'],
-    ]);
-    $message->fullmessageformat  = FORMAT_PLAIN;
-    $message->fullmessagehtml    = '<p>' . $message->fullmessage . '</p>';
-    $message->smallmessage       = get_string('notif_graded_small', 'aiassignment',
-                                       round($evaluation['similarity_score'], 2));
-    $message->notification       = 1;
-    $message->contexturl         = (new moodle_url('/mod/aiassignment/view.php', ['id' => $cm->id]))->out(false);
-    $message->contexturlname     = format_string($aiassignment->name);
-    message_send($message);
-
-    // Disparar evento de calificación
-    $event = \mod_aiassignment\event\submission_graded::create(array(
-        'objectid' => $submission->id,
-        'context' => $context,
-        'relateduserid' => $USER->id,
-        'other' => array(
-            'assignmentid' => $aiassignment->id,
-            'score' => $evaluation['similarity_score']
-        )
-    ));
-    $event->trigger();
+if ($async_mode) {
+    // Encolar tarea asíncrona — el estudiante no espera
+    $task = new \mod_aiassignment\task\evaluate_submission();
+    $task->set_custom_data(['submissionid' => $submission->id]);
+    \core\task\manager::queue_adhoc_task($task);
 
     redirect(new moodle_url('/mod/aiassignment/view.php', array('id' => $cm->id)),
-        get_string('submissionsaved', 'aiassignment'), null, \core\output\notification::NOTIFY_SUCCESS);
+        '✅ Tu respuesta fue enviada. La evaluación estará lista en unos minutos.',
+        null, \core\output\notification::NOTIFY_SUCCESS);
+} else {
+    // Evaluación síncrona (comportamiento original)
+    try {
+        $evaluation = \mod_aiassignment\ai_evaluator::evaluate(
+            $answer,
+            $aiassignment->solution,
+            $aiassignment->type
+        );
 
-} catch (Exception $e) {
-    // Si falla la evaluación, el envío se queda como 'pending'
-    debugging('Evaluation failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
-    
-    redirect(new moodle_url('/mod/aiassignment/view.php', array('id' => $cm->id)),
-        get_string('submissionsaved', 'aiassignment') . ' ' . get_string('evaluationfailed', 'aiassignment'),
-        null, \core\output\notification::NOTIFY_WARNING);
+        // Guardar evaluación
+        $evalrecord = new stdClass();
+        $evalrecord->submission       = $submission->id;
+        $evalrecord->similarity_score = $evaluation['similarity_score'];
+        $evalrecord->ai_feedback      = $evaluation['feedback'];
+        $evalrecord->ai_analysis      = $evaluation['analysis'];
+        $evalrecord->timecreated      = time();
+        $DB->insert_record('aiassignment_evaluations', $evalrecord);
+
+        // Actualizar submission
+        $submission->status       = 'evaluated';
+        $submission->score        = $evaluation['similarity_score'];
+        $submission->feedback     = $evaluation['feedback'];
+        $submission->evaluated_at = time();
+        $submission->timemodified = time();
+        $DB->update_record('aiassignment_submissions', $submission);
+
+        aiassignment_update_grades($aiassignment, $USER->id);
+
+        // Notificar al estudiante
+        $message                    = new \core\message\message();
+        $message->component         = 'mod_aiassignment';
+        $message->name              = 'submission_graded';
+        $message->userfrom          = \core_user::get_noreply_user();
+        $message->userto            = $USER;
+        $message->subject           = get_string('notif_graded_subject', 'aiassignment',
+                                          format_string($aiassignment->name));
+        $message->fullmessage       = get_string('notif_graded_body', 'aiassignment', [
+            'assignment' => format_string($aiassignment->name),
+            'score'      => round($evaluation['similarity_score'], 2),
+            'feedback'   => $evaluation['feedback'],
+        ]);
+        $message->fullmessageformat = FORMAT_PLAIN;
+        $message->fullmessagehtml   = '<p>' . $message->fullmessage . '</p>';
+        $message->smallmessage      = get_string('notif_graded_small', 'aiassignment',
+                                          round($evaluation['similarity_score'], 2));
+        $message->notification      = 1;
+        $message->contexturl        = (new moodle_url('/mod/aiassignment/view.php',
+                                          ['id' => $cm->id]))->out(false);
+        $message->contexturlname    = format_string($aiassignment->name);
+        message_send($message);
+
+        $event = \mod_aiassignment\event\submission_graded::create([
+            'objectid'      => $submission->id,
+            'context'       => $context,
+            'relateduserid' => $USER->id,
+            'other'         => ['assignmentid' => $aiassignment->id,
+                                'score'        => $evaluation['similarity_score']],
+        ]);
+        $event->trigger();
+
+        redirect(new moodle_url('/mod/aiassignment/view.php', array('id' => $cm->id)),
+            get_string('submissionsaved', 'aiassignment'), null, \core\output\notification::NOTIFY_SUCCESS);
+
+    } catch (Exception $e) {
+        debugging('Evaluation failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        redirect(new moodle_url('/mod/aiassignment/view.php', array('id' => $cm->id)),
+            get_string('submissionsaved', 'aiassignment') . ' ' . get_string('evaluationfailed', 'aiassignment'),
+            null, \core\output\notification::NOTIFY_WARNING);
+    }
 }

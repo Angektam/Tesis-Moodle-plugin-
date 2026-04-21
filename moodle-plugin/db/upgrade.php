@@ -42,5 +42,12 @@ function xmldb_aiassignment_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026041501, 'aiassignment');
     }
 
+    if ($oldversion < 2026042002) {
+        // v2.0.0: No hay cambios de BD en esta versión.
+        // Las nuevas funcionalidades (Monaco, async eval, AI detector, rúbricas, modo examen)
+        // se configuran desde Administración del sitio → Plugins → mod_aiassignment.
+        upgrade_mod_savepoint(true, 2026042002, 'aiassignment');
+    }
+
     return true;
 }

@@ -78,6 +78,32 @@ class mod_aiassignment_mod_form extends moodleform_mod {
         $mform->addRule('maxattempts', null, 'numeric', null, 'client');
         $mform->addHelpButton('maxattempts', 'maxattempts', 'aiassignment');
 
+        // ── Rúbrica personalizable ────────────────────────────────────
+        $mform->addElement('header', 'rubricsettings', '📋 Rúbrica de evaluación (opcional)');
+        $mform->addElement('advcheckbox', 'use_rubric', 'Usar rúbrica personalizada',
+            'Evalúa con criterios ponderados en lugar de un score único');
+        $mform->setDefault('use_rubric', 0);
+
+        // Pesos de la rúbrica (solo visibles si use_rubric está activo)
+        $rubric_fields = [
+            'rubric_funcionalidad' => ['Funcionalidad (%)', 40],
+            'rubric_estilo'        => ['Estilo y claridad (%)', 20],
+            'rubric_eficiencia'    => ['Eficiencia (%)', 20],
+            'rubric_documentacion' => ['Documentación (%)', 20],
+        ];
+        foreach ($rubric_fields as $field => [$label, $default]) {
+            $mform->addElement('text', $field, $label, ['size' => '5']);
+            $mform->setType($field, PARAM_INT);
+            $mform->setDefault($field, $default);
+            $mform->hideIf($field, 'use_rubric', 'notchecked');
+        }
+
+        // ── Modo examen por tarea ─────────────────────────────────────
+        $mform->addElement('header', 'examsettings', '🔒 Configuración de examen');
+        $mform->addElement('advcheckbox', 'exam_mode_local', 'Modo examen para esta tarea',
+            'Detecta cambios de pestaña y restringe copiar/pegar');
+        $mform->setDefault('exam_mode_local', 0);
+
         // Elementos estándar
         $this->standard_coursemodule_elements();
 

@@ -36,10 +36,45 @@ $sql = "SELECT s.id, s.assignment, s.attempt, s.score, s.status, s.timecreated,
 
 $submissions = $DB->get_records_sql($sql, ['courseid' => $courseid, 'userid' => $userid]);
 
-// Estadísticas resumen
+// ── Estadísticas avanzadas ────────────────────────────────────
 $total_subs  = count($submissions);
 $scores      = array_filter(array_column((array)$submissions, 'score'), fn($v) => $v !== null);
 $avg_grade   = $total_subs > 0 && !empty($scores) ? round(array_sum($scores) / count($scores), 2) : 0;
+$best_score  = !empty($scores) ? round(max($scores), 1) : 0;
+
+// Tiempo promedio de resolución (entre primer y último intento por tarea)
+$resolution_times = [];
+$by_assignment = [];
+foreach ($submissions as $sub) {
+    $by_assignment[$sub->assignment][] = $sub->timecreated;
+}
+foreach ($by_assignment as $aid => $times) {
+    if (count($times) > 1) {
+        $resolution_times[] = max($times) - min($times);
+    }
+}
+$avg_resolution = !empty($resolution_times)
+    ? round(array_sum($resolution_times) / count($resolution_times) / 60) . ' min'
+    : 'N/A';
+
+// Lenguajes detectados
+$languages_used = [];
+foreach ($submissions as $sub) {
+    if (!empty($sub->answer)) {
+        $lang = self_detect_lang($sub->answer);
+        if ($lang) $languages_used[$lang] = ($languages_used[$lang] ?? 0) + 1;
+    }
+}
+arsort($languages_used);
+
+function self_detect_lang(string $code): string {
+    if (preg_match('/\bdef\s+\w+\s*\(/', $code)) return 'Python';
+    if (preg_match('/\bpublic\s+class\b/', $code)) return 'Java';
+    if (preg_match('/\bconsole\.log\b/', $code)) return 'JavaScript';
+    if (preg_match('/\b#include\b/', $code)) return 'C/C++';
+    if (preg_match('/<\?php/', $code)) return 'PHP';
+    return 'Otro';
+}
 
 // Datos para gráfica
 $chart_labels = [];
@@ -71,8 +106,7 @@ echo html_writer::tag('p', s($student->email), ['style' => 'margin:0; color:#6b7
 echo html_writer::end_div();
 echo html_writer::end_div();
 
-// ── Tarjetas resumen ──────────────────────────────────────────
-echo html_writer::start_div('stats-cards-container', ['style' => 'grid-template-columns:repeat(3,1fr);']);
+echo html_writer::start_div('stats-cards-container', ['style' => 'grid-template-columns:repeat(4,1fr);']);
 
 echo html_writer::start_div('stat-card stat-card-primary');
 echo html_writer::tag('div', $total_subs, ['class' => 'stat-number']);
@@ -81,7 +115,12 @@ echo html_writer::end_div();
 
 echo html_writer::start_div('stat-card stat-card-success');
 echo html_writer::tag('div', $avg_grade . '%', ['class' => 'stat-number']);
-echo html_writer::tag('div', 'Promedio de Calificaciones', ['class' => 'stat-label']);
+echo html_writer::tag('div', 'Promedio', ['class' => 'stat-label']);
+echo html_writer::end_div();
+
+echo html_writer::start_div('stat-card stat-card-info');
+echo html_writer::tag('div', $best_score . '%', ['class' => 'stat-number']);
+echo html_writer::tag('div', 'Mejor Nota', ['class' => 'stat-label']);
 echo html_writer::end_div();
 
 $max_plag = 0;
@@ -93,10 +132,40 @@ foreach ($submissions as $sub) {
 $plag_class = $max_plag >= 75 ? 'stat-card-danger' : ($max_plag >= 50 ? 'stat-card-warning' : 'stat-card-ok');
 echo html_writer::start_div('stat-card ' . $plag_class);
 echo html_writer::tag('div', round($max_plag, 1) . '%', ['class' => 'stat-number']);
-echo html_writer::tag('div', 'Plagio Máximo Detectado', ['class' => 'stat-label']);
+echo html_writer::tag('div', 'Plagio Máximo', ['class' => 'stat-label']);
 echo html_writer::end_div();
 
 echo html_writer::end_div(); // stats-cards-container
+
+// ── Fila de métricas adicionales ──────────────────────────────
+echo html_writer::start_div('', ['style' => 'display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;']);
+
+echo html_writer::start_div('', ['style' => 'background:#f8f9fa;border-radius:8px;padding:12px 16px;flex:1;min-width:140px;']);
+echo html_writer::tag('div', '⏱️ ' . $avg_resolution, ['style' => 'font-size:16px;font-weight:700;color:#555;']);
+echo html_writer::tag('div', 'Tiempo promedio de resolución', ['style' => 'font-size:11px;color:#888;margin-top:2px;']);
+echo html_writer::end_div();
+
+if (!empty($languages_used)) {
+    $top_lang = array_key_first($languages_used);
+    echo html_writer::start_div('', ['style' => 'background:#f8f9fa;border-radius:8px;padding:12px 16px;flex:1;min-width:140px;']);
+    echo html_writer::tag('div', '💻 ' . $top_lang, ['style' => 'font-size:16px;font-weight:700;color:#555;']);
+    echo html_writer::tag('div', 'Lenguaje más usado', ['style' => 'font-size:11px;color:#888;margin-top:2px;']);
+    echo html_writer::end_div();
+}
+
+$trend = '';
+if (count($chart_scores) >= 2) {
+    $last  = end($chart_scores);
+    $first = reset($chart_scores);
+    $diff  = $last - $first;
+    $trend = $diff > 0 ? '📈 +' . round($diff, 1) . '% mejora' : ($diff < 0 ? '📉 ' . round($diff, 1) . '% baja' : '➡️ Sin cambio');
+    echo html_writer::start_div('', ['style' => 'background:#f8f9fa;border-radius:8px;padding:12px 16px;flex:1;min-width:140px;']);
+    echo html_writer::tag('div', $trend, ['style' => 'font-size:14px;font-weight:700;color:#555;']);
+    echo html_writer::tag('div', 'Tendencia general', ['style' => 'font-size:11px;color:#888;margin-top:2px;']);
+    echo html_writer::end_div();
+}
+
+echo html_writer::end_div();
 
 // ── Gráfica de evolución ──────────────────────────────────────
 if (count($chart_scores) > 1) {

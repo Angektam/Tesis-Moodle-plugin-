@@ -72,4 +72,75 @@ if ($ADMIN->fulltree) {
         '10000',
         PARAM_INT
     ));
+
+    // Evaluación asíncrona
+    $settings->add(new admin_setting_configcheckbox(
+        'mod_aiassignment/async_evaluation',
+        'Evaluación asíncrona (recomendado)',
+        'Si está activo, los envíos se evalúan en background con el cron de Moodle. El estudiante no espera bloqueado. Requiere que el cron esté configurado.',
+        0
+    ));
+
+    // Modo examen
+    $settings->add(new admin_setting_configcheckbox(
+        'mod_aiassignment/exam_mode',
+        'Modo examen',
+        'Activa restricciones de examen: detecta cambios de pestaña, deshabilita clic derecho y copiar/pegar.',
+        0
+    ));
+
+    // Detección de código IA
+    $settings->add(new admin_setting_configcheckbox(
+        'mod_aiassignment/detect_ai_code',
+        'Detectar código generado por IA',
+        'Analiza si el código del estudiante fue generado por ChatGPT, Copilot u otras IAs. Requiere API key de OpenAI para análisis avanzado.',
+        1
+    ));
+
+    // Rúbricas
+    $settings->add(new admin_setting_configcheckbox(
+        'mod_aiassignment/use_rubrics',
+        'Usar rúbricas de evaluación',
+        'Evalúa con criterios ponderados (funcionalidad, estilo, eficiencia, documentación) en lugar de un score único.',
+        0
+    ));
+
+    // ── Judge0 (ejecución real de código) ─────────────────────────
+    $settings->add(new admin_setting_heading(
+        'mod_aiassignment/judge0_heading',
+        '🚀 Ejecución de Código (Judge0)',
+        'Configura Judge0 para ejecutar el código del estudiante contra test cases reales. ' .
+        'Obtén tu API key en <a href="https://rapidapi.com/judge0-official/api/judge0-ce" target="_blank">RapidAPI Judge0</a>.'
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_aiassignment/judge0_api_key',
+        'Judge0 API Key',
+        'Clave API de Judge0 (RapidAPI). Deja vacío para usar modo demo.',
+        '',
+        PARAM_TEXT
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_aiassignment/judge0_api_url',
+        'Judge0 API URL',
+        'URL base de la API de Judge0.',
+        'https://judge0-ce.p.rapidapi.com',
+        PARAM_URL
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_aiassignment/judge0_api_host',
+        'Judge0 API Host',
+        'Host de la API de Judge0 para RapidAPI.',
+        'judge0-ce.p.rapidapi.com',
+        PARAM_TEXT
+    ));
+
+    $settings->add(new admin_setting_configcheckbox(
+        'mod_aiassignment/run_code_on_submit',
+        'Ejecutar código al enviar',
+        'Si está activo, el código del estudiante se ejecuta automáticamente contra los test cases al enviar.',
+        0
+    ));
 }

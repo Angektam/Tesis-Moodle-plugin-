@@ -21,10 +21,19 @@ class ai_evaluator {
     public static function evaluate($studentanswer, $teachersolution, $type) {
         global $CFG;
 
+        // ── Caché: evitar llamadas duplicadas a OpenAI ────────────────
+        $cached = \mod_aiassignment\eval_cache::get($studentanswer, $teachersolution, $type);
+        if ($cached !== null) {
+            $cached['from_cache'] = true;
+            return $cached;
+        }
+
         // Verificar si está en modo demo
         $demomode = get_config('mod_aiassignment', 'demo_mode');
         if ($demomode) {
-            return self::demo_evaluate($studentanswer, $teachersolution, $type);
+            $result = self::demo_evaluate($studentanswer, $teachersolution, $type);
+            \mod_aiassignment\eval_cache::set($studentanswer, $teachersolution, $type, $result);
+            return $result;
         }
 
         // Obtener API key de la configuración
@@ -45,6 +54,21 @@ class ai_evaluator {
         // Llamar a OpenAI API
         try {
             $result = self::call_openai_api($apikey, $model, $systemprompt, $userprompt);
+
+            // ── Análisis de complejidad (solo para programación) ──────
+            if ($type === 'programming') {
+                $complexity = \mod_aiassignment\complexity_analyzer::analyze($studentanswer);
+                $result['complexity'] = $complexity;
+                // Aplicar bonus/penalización de complejidad
+                $result['similarity_score'] = min(100, max(0,
+                    $result['similarity_score'] + $complexity['score_bonus']
+                ));
+                $result['analysis'] .= "\n\n" . $complexity['feedback'];
+            }
+
+            // Guardar en caché
+            \mod_aiassignment\eval_cache::set($studentanswer, $teachersolution, $type, $result);
+
             return $result;
         } catch (\Exception $e) {
             debugging('OpenAI API Error: ' . $e->getMessage(), DEBUG_DEVELOPER);

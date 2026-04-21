@@ -132,19 +132,138 @@ if ($cansubmit && !$cangrade) {
                 $aiassignment->maxattempts - $attemptcount) . '</p>';
         }
 
-        echo '<form method="post" action="submit.php">';
+        // ── Modo examen: detectar cambio de pestaña ──────────────────
+        $exammode = (bool)get_config('mod_aiassignment', 'exam_mode');
+        if ($exammode) {
+            echo html_writer::tag('div',
+                '🔒 Modo examen activo. Los cambios de pestaña serán registrados.',
+                ['class' => 'alert alert-warning', 'id' => 'exam-warning']);
+        }
+
+        echo '<form method="post" action="submit.php" id="submission-form">';
         echo '<input type="hidden" name="id" value="' . $cm->id . '">';
         echo '<input type="hidden" name="sesskey" value="' . sesskey() . '">';
-        echo '<textarea id="id_answer" name="answer" rows="15" cols="80" required maxlength="10000"
-              oninput="document.getElementById(\'char_counter\').textContent=this.value.length"></textarea>';
-        echo '<div style="text-align:right; font-size:0.85rem; color:#666; margin-bottom:8px;">';
-        echo '<span id="char_counter">0</span> / 10000 ' . get_string('characters', 'aiassignment');
+        echo '<input type="hidden" name="tab_switches" id="tab_switches_input" value="0">';
+
+        // ── Selector de lenguaje ──────────────────────────────────────
+        $lang_options = ['python' => 'Python', 'javascript' => 'JavaScript',
+                         'java' => 'Java', 'cpp' => 'C/C++', 'php' => 'PHP', 'plaintext' => 'Texto'];
+        $default_lang = $aiassignment->type === 'programming' ? 'python' : 'plaintext';
+        echo '<div style="margin-bottom:8px;display:flex;align-items:center;gap:12px;">';
+        echo '<label style="font-size:13px;font-weight:600;color:#555;">Lenguaje:</label>';
+        echo '<select id="lang-selector" style="padding:5px 10px;border-radius:6px;border:1px solid #dee2e6;font-size:13px;">';
+        foreach ($lang_options as $val => $label) {
+            $sel = $val === $default_lang ? ' selected' : '';
+            echo "<option value=\"$val\"$sel>$label</option>";
+        }
+        echo '</select>';
+        echo '<span style="font-size:12px;color:#888;">💡 El editor tiene resaltado de sintaxis</span>';
         echo '</div>';
+
+        // ── Editor Monaco ─────────────────────────────────────────────
+        echo '<div id="monaco-editor-container" style="width:100%;height:380px;border:1px solid #dee2e6;border-radius:8px;overflow:hidden;margin-bottom:8px;"></div>';
+        // Textarea oculto que se sincroniza con Monaco
+        echo '<textarea id="id_answer" name="answer" style="display:none;" required></textarea>';
+
+        echo '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
+        echo '<span style="font-size:12px;color:#888;"><span id="char_counter">0</span> / 10000 ' . get_string('characters', 'aiassignment') . '</span>';
+        echo '<span style="font-size:12px;color:#888;" id="line-counter">Línea 1, Col 1</span>';
+        echo '</div>';
+
         echo '<input type="submit" id="submit-btn" value="' . get_string('submit', 'aiassignment') . '" class="btn btn-primary">';
         echo '<span id="eval-spinner" style="display:none; margin-left:12px; color:#555; font-size:14px;">
-    ⏳ Evaluando con IA... por favor espera.
+    ⏳ Enviando... tu respuesta será evaluada en breve.
 </span>';
         echo '</form>';
+
+        // ── Script Monaco + modo examen ───────────────────────────────
+        $exam_js = $exammode ? '
+            var tabSwitches = 0;
+            document.addEventListener("visibilitychange", function() {
+                if (document.hidden) {
+                    tabSwitches++;
+                    document.getElementById("tab_switches_input").value = tabSwitches;
+                    var warn = document.getElementById("exam-warning");
+                    if (warn) warn.innerHTML = "⚠️ Cambio de pestaña detectado (" + tabSwitches + " vez/veces). Esto será registrado.";
+                }
+            });
+            document.addEventListener("contextmenu", function(e) { e.preventDefault(); });
+            document.addEventListener("copy", function(e) {
+                if (document.activeElement && document.activeElement.id === "id_answer") {
+                    e.preventDefault();
+                    alert("⚠️ Copiar está deshabilitado en modo examen.");
+                }
+            });
+        ' : '';
+
+        echo "
+<script>
+(function() {
+    $exam_js
+
+    function initMonaco() {
+        require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+            var editor = monaco.editor.create(document.getElementById('monaco-editor-container'), {
+                value: '',
+                language: '" . $default_lang . "',
+                theme: 'vs',
+                fontSize: 14,
+                minimap: { enabled: false },
+                lineNumbers: 'on',
+                wordWrap: 'on',
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
+                tabSize: 4,
+                insertSpaces: true,
+                formatOnPaste: true,
+                suggestOnTriggerCharacters: true,
+            });
+
+            // Sincronizar con textarea oculto
+            editor.onDidChangeModelContent(function() {
+                var val = editor.getValue();
+                document.getElementById('id_answer').value = val;
+                document.getElementById('char_counter').textContent = val.length;
+            });
+
+            // Actualizar posición del cursor
+            editor.onDidChangeCursorPosition(function(e) {
+                document.getElementById('line-counter').textContent =
+                    'Línea ' + e.position.lineNumber + ', Col ' + e.position.column;
+            });
+
+            // Cambiar lenguaje
+            document.getElementById('lang-selector').addEventListener('change', function() {
+                monaco.editor.setModelLanguage(editor.getModel(), this.value);
+            });
+
+            // Guardar referencia global
+            window.monacoEditor = editor;
+        });
+    }
+
+    // Cargar Monaco loader
+    var script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js';
+    script.onload = initMonaco;
+    document.head.appendChild(script);
+
+    // Validar antes de enviar
+    document.getElementById('submission-form').addEventListener('submit', function(e) {
+        var answer = document.getElementById('id_answer').value.trim();
+        if (!answer) {
+            e.preventDefault();
+            alert('Por favor escribe tu respuesta antes de enviar.');
+            return;
+        }
+        document.getElementById('submit-btn').disabled = true;
+        document.getElementById('submit-btn').value = 'Enviando...';
+        document.getElementById('eval-spinner').style.display = 'inline';
+    });
+})();
+</script>
+";
         echo $OUTPUT->box_end();
     }
 

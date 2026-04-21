@@ -176,3 +176,36 @@ $string['privacy:metadata:core_grades']                                 = 'Tarea
 $string['privacy:metadata:openai']                                      = 'Tarea con IA envía datos a OpenAI para evaluación';
 $string['privacy:metadata:openai:answer']                               = 'Respuesta del estudiante enviada a OpenAI para evaluación';
 $string['privacy:metadata:openai:solution']                             = 'Solución del profesor enviada a OpenAI para comparación';
+
+// ── Mejoras v2.0 ──────────────────────────────────────────────────────────
+
+// Editor de código
+$string['codelanguage']          = 'Lenguaje';
+$string['editorhint']            = '💡 El editor tiene resaltado de sintaxis';
+
+// Evaluación asíncrona
+$string['submissionqueued']      = '✅ Tu respuesta fue enviada. La evaluación estará lista en unos minutos.';
+$string['asynceval_info']        = 'Tu envío está en cola para evaluación. Recibirás una notificación cuando esté listo.';
+
+// Modo examen
+$string['exammode_active']       = '🔒 Modo examen activo. Los cambios de pestaña serán registrados.';
+$string['tabswitch_detected']    = '⚠️ Cambio de pestaña detectado ({$a} vez/veces). Esto será registrado.';
+$string['exammode_label']        = 'Modo examen para esta tarea';
+$string['exammode_desc']         = 'Detecta cambios de pestaña y restringe copiar/pegar';
+
+// Detección de código IA
+$string['aicode_detected']       = '🤖 Posible código generado por IA detectado ({$a}%)';
+$string['aicode_label']          = 'Detectar código generado por IA';
+$string['aicode_human']          = '✅ Probablemente escrito por humano';
+$string['aicode_suspicious']     = '⚠️ Posiblemente asistido por IA';
+$string['aicode_probable']       = '🤖 Probable código IA';
+
+// Rúbricas
+$string['rubric_funcionalidad']  = 'Funcionalidad (%)';
+$string['rubric_estilo']         = 'Estilo y claridad (%)';
+$string['rubric_eficiencia']     = 'Eficiencia (%)';
+$string['rubric_documentacion']  = 'Documentación (%)';
+$string['rubric_breakdown']      = 'Desglose por criterio';
+$string['rubric_total']          = 'Total';
+$string['use_rubric']            = 'Usar rúbrica personalizada';
+$string['rubricsettings']        = 'Rúbrica de evaluación (opcional)';

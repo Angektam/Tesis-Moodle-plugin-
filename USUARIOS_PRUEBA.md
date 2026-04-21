@@ -1,82 +1,61 @@
-# Usuarios de Prueba
+# Usuarios de Prueba — Moodle
 
-Este documento contiene las credenciales de los usuarios de prueba creados automáticamente.
+## 👨‍💼 Administrador
 
-## 👥 Usuarios Disponibles
+| Usuario | Contraseña  |
+|---------|-------------|
+| `admin` | `Admin123!` |
 
-### 👨‍🏫 Maestro
-- **Email**: `maestro@test.com`
-- **Contraseña**: `123456`
-- **Rol**: Maestro
-- **Funciones**: Puede crear problemas, ver envíos de alumnos, evaluar respuestas
+---
 
-### 👨‍🎓 Alumno
-- **Email**: `alumno@test.com`
-- **Contraseña**: `123456`
-- **Rol**: Alumno
-- **Funciones**: Puede ver problemas, enviar respuestas, ver sus calificaciones
+## 🎓 Estudiantes — todos usan contraseña `Test1234!`
 
-## 🚀 Crear Usuarios de Prueba
+| Usuario       | Nombre                   |
+|---------------|--------------------------|
+| `est01`       | Carlos García            |
+| `est02`       | María López              |
+| `est03`       | Pedro Martínez           |
+| `est04`       | Ana Rodríguez            |
+| `est05`       | Luis Hernández           |
+| `est06`       | Sofía Jiménez            |
+| `est07`       | Diego Torres             |
+| `est08`       | Valentina Flores         |
+| `est09`       | Andrés Vargas            |
+| `est10`       | Camila Reyes             |
+| `est11`       | Sebastián Cruz           |
+| `est12`       | Isabella Morales         |
+| `est13`       | Mateo Ortiz              |
+| `est14`       | Lucía Mendoza            |
+| `est15`       | Nicolás Castillo         |
+| `est16`       | Gabriela Ramos           |
+| `est17`       | Felipe Gutiérrez         |
+| `est18`       | Daniela Sánchez          |
+| `est19`       | Tomás Ramírez            |
+| `est20`       | Valeria Núñez            |
+| `est21`       | Emilio Peña              |
+| `est22`       | Renata Aguilar           |
+| `est23`       | Joaquín Medina           |
+| `est24`       | Mariana Vega             |
+| `est25`       | Rodrigo Herrera          |
+| `est26`       | Natalia Ríos             |
+| `est27`       | Alejandro Mora           |
+| `est28`       | Paula Delgado            |
+| `est29`       | Ignacio Fuentes          |
+| `est30`       | Catalina Espinoza        |
+| `alumno_c1`   | Juan Pérez               |
+| `alumno_c2`   | Laura González           |
+| `alumno_c3`   | Miguel Ramírez           |
+| `alumno_c4`   | Sofía Torres             |
+| `alumno_c5`   | Carlos Mendoza           |
+| `alumno1`     | Roberto Salinas          |
+| `alumno2`     | Patricia Guerrero        |
+| `alumno3`     | Fernando Ibáñez          |
+| `alumno4`     | Claudia Paredes          |
+| `alumno5`     | Héctor Villanueva        |
+| `estudiante1` | Ximena Contreras         |
+| `estudiante2` | Arturo Domínguez         |
+| `estudiante3` | Beatriz Escobar          |
 
-Para crear estos usuarios automáticamente, ejecuta:
+---
 
-```bash
-cd server
-npm run seed
-```
-
-Este script creará:
-- ✅ Los dos usuarios de prueba (maestro y alumno)
-- ✅ 2 problemas matemáticos de ejemplo
-- ✅ 2 problemas de programación de ejemplo
-
-## 📝 Problemas de Ejemplo Creados
-
-### Problemas Matemáticos:
-1. **Resolver Ecuación Cuadrática** - Resolver x² - 5x + 6 = 0
-2. **Calcular Área de un Triángulo** - Calcular área con base y altura
-
-### Problemas de Programación:
-1. **Función para Calcular Factorial** - Crear función factorial en Python
-2. **Función para Verificar Número Primo** - Crear función para verificar si un número es primo
-
-## 🔐 Seguridad
-
-⚠️ **IMPORTANTE**: Estos usuarios son solo para desarrollo y pruebas. 
-- **NO** uses estas contraseñas en producción
-- **NO** uses estos usuarios en un entorno público
-- Cambia las contraseñas antes de desplegar a producción
-
-## 🧪 Probar el Sistema
-
-1. **Como Maestro**:
-   - Inicia sesión con `maestro@test.com` / `123456`
-   - Ve al Dashboard
-   - Crea nuevos problemas o revisa los existentes
-   - Ve los envíos de los alumnos
-
-2. **Como Alumno**:
-   - Inicia sesión con `alumno@test.com` / `123456`
-   - Ve a "Problemas" para ver los problemas disponibles
-   - Selecciona un problema y envía tu respuesta
-   - Ve a "Mis Envíos" para ver tus calificaciones
-
-## 🔄 Reiniciar Datos de Prueba
-
-Si necesitas reiniciar los datos de prueba:
-
-1. Elimina el archivo de base de datos:
-```bash
-rm server/data/database.sqlite
-```
-
-2. Ejecuta el seed nuevamente:
-```bash
-cd server
-npm run seed
-```
-
-3. Reinicia el servidor:
-```bash
-npm run dev
-```
+> ⚠️ Solo para desarrollo/pruebas. No usar en producción.
