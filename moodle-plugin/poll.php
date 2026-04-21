@@ -14,7 +14,14 @@ $cm = get_coursemodule_from_id('aiassignment', $id, 0, false, MUST_EXIST);
 require_login($cm->course, false, $cm);
 require_sesskey();
 
+// Headers de seguridad
 header('Content-Type: application/json; charset=utf-8');
+header('X-Content-Type-Options: nosniff');
+header('Cache-Control: no-store, no-cache, must-revalidate');
+
+// Validar parámetro since (no puede ser futuro ni muy antiguo)
+$since = max(0, min(time(), $since));
+$since = max($since, time() - 3600); // máximo 1 hora atrás
 
 if ($markseen && !empty($ids_raw)) {
     $ids = array_filter(array_map('intval', explode(',', $ids_raw)));

@@ -14,7 +14,13 @@ $course       = $DB->get_record('course', ['id' => $cm->course], '*', MUST_EXIST
 require_login($course, true, $cm);
 require_capability('mod/aiassignment:grade', context_module::instance($cm->id));
 
-$score = max(0, min(100, $score));
+$score = \mod_aiassignment\security::normalize_score($score);
+
+// Sanitizar comentario
+$comment = clean_param($comment, PARAM_TEXT);
+if (\core_text::strlen($comment) > 500) {
+    $comment = \core_text::substr($comment, 0, 500);
+}
 
 // Guardar historial de cambios de calificación (Mejora 6)
 $eval = $DB->get_record('aiassignment_evaluations', ['submission' => $sid]);

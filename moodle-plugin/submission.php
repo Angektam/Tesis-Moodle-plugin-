@@ -15,13 +15,11 @@ $student = $DB->get_record('user', array('id' => $submission->userid), '*', MUST
 require_login($course, true, $cm);
 $context = context_module::instance($cm->id);
 
-// Verificar permisos
+// Verificar permisos usando clase de seguridad
+\mod_aiassignment\security::check_submission_access($submission, $context);
+
 $cangrade = has_capability('mod/aiassignment:grade', $context);
 $isownsubmission = ($USER->id == $submission->userid);
-
-if (!$cangrade && !$isownsubmission) {
-    throw new moodle_exception('nopermissions', 'error', '', 'view submission');
-}
 
 $PAGE->set_url('/mod/aiassignment/submission.php', array('id' => $id));
 $PAGE->set_title(format_string($aiassignment->name));

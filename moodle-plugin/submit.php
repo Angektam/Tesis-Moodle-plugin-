@@ -18,97 +18,57 @@ $context = context_module::instance($cm->id);
 require_capability('mod/aiassignment:submit', $context);
 
 // ============================================================================
-// VALIDACIONES DE ENTRADA
+// VALIDACIONES DE ENTRADA — usando clase centralizada de seguridad
 // ============================================================================
 
-// 1. Normalizar respuesta
-$answer = trim($answer);
-
-// 2. Validar que la respuesta no esté vacía
-if ($answer === '') {
-    redirect(new moodle_url('/mod/aiassignment/view.php', array('id' => $cm->id)),
-        get_string('answerrequired', 'aiassignment'), null, \core\output\notification::NOTIFY_ERROR);
+// 1. Sanitizar y validar el código
+$maxlen = (int)(get_config('mod_aiassignment', 'max_submission_length') ?: 10000);
+try {
+    $answer = \mod_aiassignment\security::sanitize_code($answer, $maxlen);
+} catch (\moodle_exception $e) {
+    redirect(new moodle_url('/mod/aiassignment/view.php', ['id' => $cm->id]),
+        $e->getMessage(), null, \core\output\notification::NOTIFY_ERROR);
 }
 
-// 3. Validar longitud mínima (al menos 10 caracteres)
-$minlen = 10;
-if (\core_text::strlen($answer) < $minlen) {
-    redirect(new moodle_url('/mod/aiassignment/view.php', array('id' => $cm->id)),
-        get_string('answertooshort', 'aiassignment', $minlen),
-        null, \core\output\notification::NOTIFY_ERROR);
-}
-
-// 4. Validar longitud máxima
-$maxlen = 10000; // Aumentado a 10000 para código más largo
-if (\core_text::strlen($answer) > $maxlen) {
-    redirect(new moodle_url('/mod/aiassignment/view.php', array('id' => $cm->id)),
-        get_string('answertoolong', 'aiassignment', $maxlen), null, \core\output\notification::NOTIFY_ERROR);
-}
-
-// 4b. Validar que el texto tenga estructura de código (al menos una palabra clave)
+// 2. Validar que el texto tenga estructura de código para tipo programming
 $code_keywords = ['def ', 'function ', 'class ', 'for ', 'while ', 'if ', 'return ',
                   'int ', 'void ', 'public ', 'print(', 'cout', '#include', 'import '];
 $has_code = false;
 foreach ($code_keywords as $kw) {
-    if (stripos($answer, $kw) !== false) {
-        $has_code = true;
-        break;
-    }
+    if (stripos($answer, $kw) !== false) { $has_code = true; break; }
 }
 if ($aiassignment->type === 'programming' && !$has_code && strlen($answer) < 200) {
     redirect(new moodle_url('/mod/aiassignment/view.php', ['id' => $cm->id]),
-        '⚠️ Tu respuesta no parece contener código de programación. Por favor envía tu solución en código.',
+        '⚠️ Tu respuesta no parece contener código de programación.',
         null, \core\output\notification::NOTIFY_WARNING);
 }
 
-// 5. Validar caracteres sospechosos (prevenir inyección)
-if (preg_match('/<script|javascript:|onerror=|onclick=/i', $answer)) {
-    redirect(new moodle_url('/mod/aiassignment/view.php', array('id' => $cm->id)),
-        get_string('answerforbidden', 'aiassignment'),
-        null, \core\output\notification::NOTIFY_ERROR);
-}
-
-// 6. Verificar intentos máximos
+// 3. Verificar intentos máximos
 $attemptcount = $DB->count_records('aiassignment_submissions',
-    array('assignment' => $aiassignment->id, 'userid' => $USER->id));
+    ['assignment' => $aiassignment->id, 'userid' => $USER->id]);
 
 if ($aiassignment->maxattempts > 0 && $attemptcount >= $aiassignment->maxattempts) {
-    redirect(new moodle_url('/mod/aiassignment/view.php', array('id' => $cm->id)),
+    redirect(new moodle_url('/mod/aiassignment/view.php', ['id' => $cm->id]),
         get_string('maxattemptsreached', 'aiassignment'), null, \core\output\notification::NOTIFY_ERROR);
 }
 
-// 7. Prevenir envíos duplicados rápidos (anti-spam)
+// 4. Rate limiting centralizado
+try {
+    \mod_aiassignment\security::check_rate_limit($USER->id, $aiassignment->id);
+} catch (\moodle_exception $e) {
+    redirect(new moodle_url('/mod/aiassignment/view.php', ['id' => $cm->id]),
+        $e->getMessage(), null, \core\output\notification::NOTIFY_WARNING);
+}
+
+// 5. Verificar envío duplicado (mismo contenido que el anterior)
 $recentsub = $DB->get_record_sql(
-    "SELECT * FROM {aiassignment_submissions} 
-     WHERE assignment = ? AND userid = ? 
-     ORDER BY timecreated DESC LIMIT 1",
-    array($aiassignment->id, $USER->id)
+    "SELECT answer FROM {aiassignment_submissions}
+     WHERE assignment = :a AND userid = :u ORDER BY timecreated DESC LIMIT 1",
+    ['a' => $aiassignment->id, 'u' => $USER->id]
 );
-
-if ($recentsub && (time() - $recentsub->timecreated) < 5) {
-    redirect(new moodle_url('/mod/aiassignment/view.php', array('id' => $cm->id)),
-        get_string('waitbetweensubmissions', 'aiassignment', 5),
-        null, \core\output\notification::NOTIFY_WARNING);
-}
-
-// 7b. Límite de intentos por hora (anti fuerza bruta)
-$attempts_last_hour = $DB->count_records_sql(
-    "SELECT COUNT(*) FROM {aiassignment_submissions}
-     WHERE assignment = :a AND userid = :u AND timecreated >= :t",
-    ['a' => $aiassignment->id, 'u' => $USER->id, 't' => time() - 3600]
-);
-$max_per_hour = 10; // máximo 10 intentos por hora
-if ($attempts_last_hour >= $max_per_hour) {
-    redirect(new moodle_url('/mod/aiassignment/view.php', array('id' => $cm->id)),
-        '⏳ Has alcanzado el límite de ' . $max_per_hour . ' envíos por hora. Por favor espera antes de intentar de nuevo.',
-        null, \core\output\notification::NOTIFY_WARNING);
-}
-
-// 8. Validar que no sea exactamente igual al envío anterior
 if ($recentsub && trim($recentsub->answer) === $answer) {
-    redirect(new moodle_url('/mod/aiassignment/view.php', array('id' => $cm->id)),
-        get_string('duplicateanswer', 'aiassignment'),
-        null, \core\output\notification::NOTIFY_WARNING);
+    redirect(new moodle_url('/mod/aiassignment/view.php', ['id' => $cm->id]),
+        get_string('duplicateanswer', 'aiassignment'), null, \core\output\notification::NOTIFY_WARNING);
 }
 
 // Crear el envío
