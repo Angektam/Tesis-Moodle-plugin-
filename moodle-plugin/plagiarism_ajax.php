@@ -36,6 +36,12 @@ try {
         exit;
     }
 
+    // Enviar alerta por webhook si hay plagio alto
+    if (!empty($report['suspicious_pairs_count'])) {
+        $course = $DB->get_record('course', ['id' => $cm->course]);
+        \mod_aiassignment\webhook_notifier::send_plagiarism_alert($report, $course, $aiassignment);
+    }
+
     // Guardar similarity_score en evaluaciones
     foreach ($report['user_ranking'] as $row) {
         $uid   = $row['userid'];

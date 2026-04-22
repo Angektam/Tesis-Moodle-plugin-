@@ -117,6 +117,28 @@ if ($cansubmit && !$cangrade) {
         echo $OUTPUT->box_start('generalbox submitform');
         echo '<h3>' . get_string('submitanswer', 'aiassignment') . '</h3>';
 
+        // ── Pista progresiva si hay intentos fallidos ─────────────
+        if ($attemptcount >= 2) {
+            $last_sub = reset($submissions);
+            if ($last_sub && $last_sub->score !== null && $last_sub->score < 70) {
+                $hint = \mod_aiassignment\hint_generator::generate(
+                    $aiassignment->intro ?? $aiassignment->name,
+                    $last_sub->answer,
+                    $aiassignment->type,
+                    $attemptcount
+                );
+                echo \mod_aiassignment\hint_generator::render($hint);
+            }
+        }
+
+        // ── Enlace a peer review ──────────────────────────────────
+        if ($attemptcount > 0) {
+            $pr_url = new moodle_url('/mod/aiassignment/peer_review.php', ['id' => $cm->id]);
+            echo html_writer::tag('div',
+                '👥 ' . html_writer::link($pr_url, 'Revisar el código de un compañero', ['style' => 'color:#1a73e8;']),
+                ['style' => 'font-size:13px;color:#666;margin-bottom:12px;']);
+        }
+
         // Verificar si hay API key o modo demo activo
         $apikey   = get_config('mod_aiassignment', 'openai_api_key');
         $demomode = get_config('mod_aiassignment', 'demo_mode');
@@ -378,5 +400,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ── Polling de notificaciones en tiempo real ──────────────────
 echo \mod_aiassignment\realtime_notifier::render_polling_script($cm->id, $USER->id);
+
+// ── Rastreo de comportamiento en el editor ────────────────────
+echo \mod_aiassignment\behavior_tracker::get_tracking_script();
 
 echo $OUTPUT->footer();

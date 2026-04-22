@@ -189,6 +189,15 @@ if ($async_mode) {
         ]);
         $event->trigger();
 
+        // Redirigir a encuesta de satisfacción (cada 3 intentos)
+        $show_survey = ($submission->attempt % 3 === 0);
+        if ($show_survey) {
+            redirect(new moodle_url('/mod/aiassignment/satisfaction_survey.php',
+                ['id' => $cm->id, 'sid' => $submission->id]),
+                get_string('submissionsaved', 'aiassignment'), null,
+                \core\output\notification::NOTIFY_SUCCESS);
+        }
+
         redirect(new moodle_url('/mod/aiassignment/view.php', array('id' => $cm->id)),
             get_string('submissionsaved', 'aiassignment'), null, \core\output\notification::NOTIFY_SUCCESS);
 
