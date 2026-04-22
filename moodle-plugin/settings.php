@@ -143,4 +143,76 @@ if ($ADMIN->fulltree) {
         'Si está activo, el código del estudiante se ejecuta automáticamente contra los test cases al enviar.',
         0
     ));
+
+    // ── Webhooks ──────────────────────────────────────────────────
+    $settings->add(new admin_setting_heading(
+        'mod_aiassignment/webhooks_heading',
+        '🔔 Webhooks (Notificaciones externas)',
+        'Recibe alertas de plagio en Slack, Discord o Teams automáticamente.'
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_aiassignment/webhook_slack',
+        'Webhook URL — Slack',
+        'URL del webhook de Slack. Obtén una en: api.slack.com/messaging/webhooks',
+        '', PARAM_URL
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_aiassignment/webhook_discord',
+        'Webhook URL — Discord',
+        'URL del webhook de Discord. Obtén una en: Configuración del servidor → Integraciones.',
+        '', PARAM_URL
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_aiassignment/webhook_teams',
+        'Webhook URL — Microsoft Teams',
+        'URL del conector de Teams.',
+        '', PARAM_URL
+    ));
+
+    // ── Pistas progresivas ────────────────────────────────────────
+    $settings->add(new admin_setting_heading(
+        'mod_aiassignment/hints_heading',
+        '💡 Pistas Progresivas',
+        'Genera pistas automáticas con IA después de intentos fallidos.'
+    ));
+
+    $settings->add(new admin_setting_configcheckbox(
+        'mod_aiassignment/hints_enabled',
+        'Activar pistas progresivas',
+        'Muestra pistas generadas por IA después de intentos fallidos.',
+        1
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_aiassignment/hints_after_attempts',
+        'Mostrar pista después de N intentos',
+        'Número de intentos fallidos antes de mostrar la primera pista.',
+        '2', PARAM_INT
+    ));
+
+    // ── Peer Review ───────────────────────────────────────────────
+    $settings->add(new admin_setting_configcheckbox(
+        'mod_aiassignment/peer_review_enabled',
+        'Activar revisión entre pares',
+        'Permite que los estudiantes revisen el código de sus compañeros de forma anónima.',
+        0
+    ));
+
+    // ── Encuestas ─────────────────────────────────────────────────
+    $settings->add(new admin_setting_configcheckbox(
+        'mod_aiassignment/satisfaction_survey_enabled',
+        'Encuesta de satisfacción post-tarea',
+        'Muestra una encuesta rápida de 3 preguntas al estudiante después de enviar.',
+        1
+    ));
+
+    $settings->add(new admin_setting_configcheckbox(
+        'mod_aiassignment/sus_survey_enabled',
+        'Encuesta SUS de usabilidad',
+        'Habilita la encuesta SUS (System Usability Scale) para medir usabilidad del sistema.',
+        1
+    ));
 }

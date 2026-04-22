@@ -119,5 +119,58 @@
       </INDEXES>
     </TABLE>
 
+    <!-- ═══════════════════════════════════════════════════════════
+         aiassignment_sus_surveys — Encuesta SUS de usabilidad
+    ════════════════════════════════════════════════════════════ -->
+    <TABLE NAME="aiassignment_sus_surveys" COMMENT="SUS usability survey responses">
+      <FIELDS>
+        <FIELD NAME="id"          TYPE="int"    LENGTH="10" NOTNULL="true"             SEQUENCE="true"/>
+        <FIELD NAME="userid"      TYPE="int"    LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="cmid"        TYPE="int"    LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="responses"   TYPE="text"               NOTNULL="false"            SEQUENCE="false"/>
+        <FIELD NAME="sus_score"   TYPE="number" LENGTH="5"  NOTNULL="false" DECIMALS="2" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int"    LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS><KEY NAME="primary" TYPE="primary" FIELDS="id"/></KEYS>
+      <INDEXES>
+        <INDEX NAME="userid_cmid" UNIQUE="false" FIELDS="userid, cmid"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         aiassignment_satisfaction — Encuesta de satisfacción rápida
+    ════════════════════════════════════════════════════════════ -->
+    <TABLE NAME="aiassignment_satisfaction" COMMENT="Quick satisfaction survey">
+      <FIELDS>
+        <FIELD NAME="id"           TYPE="int"  LENGTH="10" NOTNULL="true"             SEQUENCE="true"/>
+        <FIELD NAME="userid"       TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="cmid"         TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="submissionid" TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="rating"       TYPE="int"  LENGTH="1"  NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="difficulty"   TYPE="int"  LENGTH="1"  NOTNULL="true" DEFAULT="3" SEQUENCE="false"/>
+        <FIELD NAME="comment"      TYPE="text"             NOTNULL="false"            SEQUENCE="false"/>
+        <FIELD NAME="timecreated"  TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS><KEY NAME="primary" TYPE="primary" FIELDS="id"/></KEYS>
+    </TABLE>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         aiassignment_peer_reviews — Revisiones entre pares
+    ════════════════════════════════════════════════════════════ -->
+    <TABLE NAME="aiassignment_peer_reviews" COMMENT="Anonymous peer code reviews">
+      <FIELDS>
+        <FIELD NAME="id"            TYPE="int"    LENGTH="10" NOTNULL="true"             SEQUENCE="true"/>
+        <FIELD NAME="reviewer_id"   TYPE="int"    LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="submission_id" TYPE="int"    LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="score"         TYPE="number" LENGTH="5"  NOTNULL="false" DECIMALS="2" SEQUENCE="false"/>
+        <FIELD NAME="feedback"      TYPE="text"               NOTNULL="false"            SEQUENCE="false"/>
+        <FIELD NAME="timecreated"   TYPE="int"    LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS><KEY NAME="primary" TYPE="primary" FIELDS="id"/></KEYS>
+      <INDEXES>
+        <INDEX NAME="reviewer_sub" UNIQUE="false" FIELDS="reviewer_id, submission_id"/>
+      </INDEXES>
+    </TABLE>
+
   </TABLES>
 </XMLDB>

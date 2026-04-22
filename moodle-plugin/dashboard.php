@@ -349,7 +349,7 @@ if (!empty($high_risk)) {
                         s($hr->firstname . ' ' . $hr->lastname),
                         ['style' => 'color:#333;font-weight:600;text-decoration:none;']),
                     ['class' => 'student-cell'])) .
-            html_writer::tag('td', s($hr->assignment_name), ['style' => 'font-size:12px;color:#666;']) .
+            html_writer::tag('td', s($hr->assignment_name), ['style' => 'font-size:12px;color:#666;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;', 'title' => s($hr->assignment_name)]) .
             html_writer::tag('td',
                 html_writer::tag('span', $pct_hr . '%',
                     ['style' => 'color:#dc3545;font-weight:700;']),

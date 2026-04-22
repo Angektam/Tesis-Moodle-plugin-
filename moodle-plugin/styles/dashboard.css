@@ -610,7 +610,8 @@ der-radius: var(--radius);
    MEJORAS v2.1 — Modo oscuro, ejecución de código, complejidad
    ═══════════════════════════════════════════════════════════ */
 
-/* ── Modo oscuro ─────────────────────────────────────────────── */
+/* ── Modo oscuro (DESACTIVADO por defecto — descomentar para activar) ── */
+/*
 @media (prefers-color-scheme: dark) {
     .aiassignment-dashboard,
     .dashboard-section,
@@ -645,6 +646,7 @@ der-radius: var(--radius);
         border-color: #45475a !important;
     }
 }
+*/
 
 /* ── Resultados de ejecución ─────────────────────────────────── */
 .execution-results {

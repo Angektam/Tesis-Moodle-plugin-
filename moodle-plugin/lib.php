@@ -417,7 +417,10 @@ function aiassignment_get_course_student_performance($courseid) {
             FROM {aiassignment_submissions} s
             INNER JOIN {aiassignment} a ON s.assignment = a.id
             INNER JOIN {user} u ON s.userid = u.id
-            WHERE a.course = :courseid AND s.score IS NOT NULL
+            WHERE a.course = :courseid
+              AND s.score IS NOT NULL
+              AND u.username != 'admin'
+              AND u.id != 2
             GROUP BY s.userid, u.firstname, u.lastname, u.picture, u.imagealt, u.email
             ORDER BY avg_grade DESC";
     return $DB->get_records_sql($sql, ['courseid' => $courseid]);
@@ -558,7 +561,6 @@ function aiassignment_get_activity_last7days($courseid) {
  */
 function aiassignment_get_high_risk_students($courseid) {
     global $DB;
-    // Usa índice en similarity_score y assignment para evitar full scan
     $sql = "SELECT u.id, u.firstname, u.lastname, u.picture, u.imagealt, u.email,
                    MAX(e.similarity_score) as max_plag,
                    s.id as submission_id,
@@ -572,6 +574,8 @@ function aiassignment_get_high_risk_students($courseid) {
             JOIN {user} u ON s.userid = u.id
             WHERE a.course = :courseid
               AND e.similarity_score >= 75
+              AND u.username != 'admin'
+              AND u.id != 2
             GROUP BY u.id, u.firstname, u.lastname, u.picture, u.imagealt, u.email,
                      s.id, a.name, cm.id
             ORDER BY max_plag DESC";

@@ -9,7 +9,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'mod_aiassignment';
-$plugin->version   = 2026042004;
+$plugin->version   = 2026042005;
 $plugin->requires  = 2022041900;
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = 'v2.2.0';
+$plugin->release   = 'v2.3.0';
