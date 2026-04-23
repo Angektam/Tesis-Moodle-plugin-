@@ -47,6 +47,33 @@ echo ═════════════════════════
 echo.
 
 :: ── 3. Iniciar el túnel ──────────────────────────────────────
-%CLOUDFLARED% tunnel --url http://localhost:80
+:: Detectar puerto de Apache automáticamente
+set APACHE_PORT=80
+powershell -Command "try { Invoke-WebRequest -Uri 'http://localhost:80' -TimeoutSec 2 -UseBasicParsing | Out-Null; Write-Host 'Puerto 80 OK' } catch { Write-Host 'Puerto 80 no responde' }" 2>nul | findstr "OK" >nul
+if %errorlevel% neq 0 (
+    powershell -Command "try { Invoke-WebRequest -Uri 'http://localhost:8080' -TimeoutSec 2 -UseBasicParsing | Out-Null; Write-Host 'Puerto 8080 OK' } catch { Write-Host 'Puerto 8080 no responde' }" 2>nul | findstr "OK" >nul
+    if %errorlevel% equ 0 (
+        set APACHE_PORT=8080
+        echo [OK] Apache detectado en puerto 8080
+    ) else (
+        echo.
+        echo [ERROR] Apache no está corriendo.
+        echo.
+        echo Solución:
+        echo   1. Abre XAMPP Control Panel
+        echo   2. Haz clic en START junto a Apache
+        echo   3. Vuelve a ejecutar este script
+        echo.
+        pause
+        exit /b 1
+    )
+) else (
+    echo [OK] Apache detectado en puerto 80
+)
+
+echo.
+echo [*] Iniciando túnel en puerto %APACHE_PORT%...
+echo.
+%CLOUDFLARED% tunnel --url http://localhost:%APACHE_PORT%
 
 pause
