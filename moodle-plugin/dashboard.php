@@ -141,8 +141,10 @@ if ($plagiarism_high > 0) {
     echo html_writer::end_div();
 }
 
-// ── Layout principal ──────────────────────────────────────────
+// ── Layout principal: 3 columnas ─────────────────────────────
 echo html_writer::start_div('dashboard-content');
+
+// ── COLUMNA 1: Tareas + Envíos recientes ─────────────────────
 echo html_writer::start_div('dashboard-column dashboard-left');
 
 // ── Tabla de tareas ───────────────────────────────────────────
@@ -278,8 +280,8 @@ if (!empty($recent_subs)) {
 echo html_writer::end_div();
 echo html_writer::end_div(); // dashboard-left
 
-// ── Columna derecha ───────────────────────────────────────────
-echo html_writer::start_div('dashboard-column dashboard-right');
+// ── COLUMNA 2: Top estudiantes + Alumnos en riesgo ───────────
+echo html_writer::start_div('dashboard-column dashboard-center');
 
 // Top performers primero (contenido real, sin espacio en blanco)
 echo html_writer::start_div('dashboard-section');
@@ -366,10 +368,13 @@ if (!empty($high_risk)) {
 }
 echo html_writer::end_div();
 
-// ── Mini gráfica de actividad últimos 7 días (Mejora 1) ───────
+echo html_writer::end_div(); // dashboard-center
+
+// ── COLUMNA 3: Gráficas ───────────────────────────────────────
+echo html_writer::start_div('dashboard-column dashboard-right');
 echo html_writer::start_div('dashboard-section');
 echo html_writer::tag('h3', '📈 Actividad — Últimos 7 días', ['class' => 'section-title']);
-echo '<div style="position:relative; height:160px;"><canvas id="activityChart"></canvas></div>';
+echo '<div class="chart-container chart-md"><canvas id="activityChart"></canvas></div>';
 echo html_writer::end_div();
 
 // Gráfica distribución de calificaciones — después del contenido real
@@ -377,7 +382,7 @@ $has_grade_data = array_sum($grade_dist) > 0;
 echo html_writer::start_div('dashboard-section');
 echo html_writer::tag('h3', '📊 Distribución de Calificaciones', ['class' => 'section-title']);
 if ($has_grade_data) {
-    echo '<div style="position:relative; height:200px;"><canvas id="gradeChart"></canvas></div>';
+    echo '<div class="chart-container chart-md"><canvas id="gradeChart"></canvas></div>';
 } else {
     echo html_writer::tag('p', 'Sin calificaciones aún.', ['class' => 'alert alert-info', 'style' => 'font-size:13px;']);
 }
@@ -396,7 +401,7 @@ foreach ($corr_raw as $r) {
 echo html_writer::start_div('dashboard-section');
 echo html_writer::tag('h3', '🔗 Correlación Plagio vs Calificación', ['class' => 'section-title']);
 if (!empty($corr_pts)) {
-    echo '<div style="position:relative; height:200px;"><canvas id="correlationChart"></canvas></div>';
+    echo '<div style="class="chart-container chart-md"><canvas id="correlationChart"></canvas></div>';
     echo html_writer::tag('p',
         '🔴 Plagio alto  🟡 Sospechoso  🟢 Original',
         ['style' => 'font-size:11px; color:#888; text-align:center; margin-top:6px;']);
@@ -415,7 +420,7 @@ $precision = $total_reviewed > 0 ? round($accuracy['confirmed'] / $total_reviewe
 echo html_writer::start_div('dashboard-section');
 echo html_writer::tag('h3', '🎯 Precisión del Detector', ['class' => 'section-title']);
 if ($total_reviewed > 0) {
-    echo '<div style="position:relative;height:160px;"><canvas id="accuracyChart"></canvas></div>';
+    echo '<div style="class="chart-container chart-md"><canvas id="accuracyChart"></canvas></div>';
     echo html_writer::tag('p',
         'Basado en ' . $total_reviewed . ' caso(s) revisados por el profesor. ' .
         'Precisión: ' . html_writer::tag('strong', $precision . '%',
@@ -590,3 +595,4 @@ echo "
 ";
 
 echo $OUTPUT->footer();
+
