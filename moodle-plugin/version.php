@@ -8,8 +8,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'mod_aiassignment';
-$plugin->version   = 2026042005;
-$plugin->requires  = 2022041900;
-$plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = 'v2.3.0';
+$plugin->component    = 'mod_aiassignment';   // Frankenstyle name
+$plugin->version      = 2026042400;           // YYYYMMDDXX
+$plugin->requires     = 2022041900;           // Moodle 4.0 minimum
+$plugin->maturity     = MATURITY_STABLE;
+$plugin->release      = '2.2.0';
