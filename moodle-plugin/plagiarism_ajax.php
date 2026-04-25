@@ -17,6 +17,7 @@ $course       = $DB->get_record('course', ['id' => $cm->course], '*', MUST_EXIST
 $aiassignment = $DB->get_record('aiassignment', ['id' => $cm->instance], '*', MUST_EXIST);
 
 require_login($course, true, $cm);
+require_sesskey();
 require_capability('mod/aiassignment:grade', context_module::instance($cm->id));
 
 @set_time_limit(300);

@@ -594,5 +594,21 @@ echo "
 </script>
 ";
 
+// ── Dark mode toggle ─────────────────────────────────────────
+echo '
+<button class="dark-mode-toggle" id="darkToggle" title="Cambiar tema" aria-label="Cambiar tema oscuro/claro">🌙</button>
+<script>
+(function(){
+    var btn = document.getElementById("darkToggle");
+    var saved = localStorage.getItem("aiassignment_dark");
+    if (saved === "1") { document.body.classList.add("dark-mode"); btn.textContent = "☀️"; }
+    btn.addEventListener("click", function(){
+        var isDark = document.body.classList.toggle("dark-mode");
+        btn.textContent = isDark ? "☀️" : "🌙";
+        localStorage.setItem("aiassignment_dark", isDark ? "1" : "0");
+    });
+})();
+</script>';
+
 echo $OUTPUT->footer();
 

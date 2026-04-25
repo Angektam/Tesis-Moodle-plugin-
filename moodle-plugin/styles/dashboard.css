@@ -430,3 +430,155 @@
   .submissions-table th, .submissions-table td { padding: 6px 7px; }
   .btn { font-size: 12px; padding: 5px 10px; }
 }
+
+/* ================================================================
+   DARK MODE — AI Assignment Dashboard
+   Activado con: <html data-theme="dark"> o clase .dark-mode en body
+   ================================================================ */
+
+/* Toggle button */
+.dark-mode-toggle {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  background: var(--gray-800);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,.3);
+  transition: background .2s, transform .2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dark-mode-toggle:hover { background: var(--primary); transform: scale(1.1); }
+
+/* Dark mode variables */
+[data-theme="dark"],
+body.dark-mode {
+  --bg-page:    #0f172a;
+  --bg-card:    #1e293b;
+  --bg-input:   #334155;
+  --text-main:  #f1f5f9;
+  --text-muted: #94a3b8;
+  --border:     #334155;
+  --primary-light: #1e3a5f;
+  --success-light: #14532d;
+  --info-light:    #164e63;
+  --warning-light: #451a03;
+  --danger-light:  #450a0a;
+  --gray-50:    #1e293b;
+  --gray-100:   #334155;
+  --gray-200:   #475569;
+  --gray-300:   #64748b;
+  --gray-400:   #94a3b8;
+  --gray-500:   #cbd5e1;
+  --gray-600:   #e2e8f0;
+  --gray-700:   #f1f5f9;
+  --gray-800:   #f8fafc;
+  --gray-900:   #ffffff;
+}
+
+[data-theme="dark"] body,
+body.dark-mode {
+  background-color: #0f172a !important;
+  color: #f1f5f9 !important;
+}
+
+/* Cards */
+[data-theme="dark"] .stat-card,
+body.dark-mode .stat-card,
+[data-theme="dark"] .dashboard-card,
+body.dark-mode .dashboard-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+/* Tables */
+[data-theme="dark"] table,
+body.dark-mode table {
+  color: #f1f5f9 !important;
+}
+[data-theme="dark"] th,
+body.dark-mode th {
+  background: #334155 !important;
+  color: #f1f5f9 !important;
+  border-color: #475569 !important;
+}
+[data-theme="dark"] td,
+body.dark-mode td {
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+[data-theme="dark"] tr:hover td,
+body.dark-mode tr:hover td {
+  background: #334155 !important;
+}
+
+/* Inputs */
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea,
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea {
+  background: #334155 !important;
+  color: #f1f5f9 !important;
+  border-color: #475569 !important;
+}
+
+/* Alerts / boxes */
+[data-theme="dark"] .alert-info,
+body.dark-mode .alert-info    { background: #164e63 !important; color: #a5f3fc !important; border-color: #0891b2 !important; }
+[data-theme="dark"] .alert-success,
+body.dark-mode .alert-success { background: #14532d !important; color: #86efac !important; border-color: #16a34a !important; }
+[data-theme="dark"] .alert-warning,
+body.dark-mode .alert-warning { background: #451a03 !important; color: #fde68a !important; border-color: #d97706 !important; }
+[data-theme="dark"] .alert-danger,
+body.dark-mode .alert-danger  { background: #450a0a !important; color: #fca5a5 !important; border-color: #dc2626 !important; }
+
+/* Code blocks */
+[data-theme="dark"] pre,
+body.dark-mode pre {
+  background: #0d1117 !important;
+  color: #e6edf3 !important;
+  border-color: #30363d !important;
+}
+
+/* Hint box */
+[data-theme="dark"] .hint-box,
+body.dark-mode .hint-box {
+  background: #1e293b !important;
+  color: #f1f5f9 !important;
+}
+
+/* Execution results */
+[data-theme="dark"] .execution-results code,
+body.dark-mode .execution-results code {
+  background: rgba(255,255,255,.1) !important;
+  color: #e2e8f0 !important;
+}
+
+/* Rubric table */
+[data-theme="dark"] .rubric-breakdown table,
+body.dark-mode .rubric-breakdown table {
+  background: #1e293b !important;
+}
+
+/* Dashboard title */
+[data-theme="dark"] .dashboard-title,
+body.dark-mode .dashboard-title {
+  color: #93c5fd !important;
+}
+
+/* Scrollbar */
+[data-theme="dark"] ::-webkit-scrollbar { width: 8px; height: 8px; }
+[data-theme="dark"] ::-webkit-scrollbar-track { background: #1e293b; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #64748b; }

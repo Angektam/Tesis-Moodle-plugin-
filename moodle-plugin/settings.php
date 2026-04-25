@@ -4,13 +4,12 @@
 defined('MOODLE_INTERNAL') || die();
 
 if ($ADMIN->fulltree) {
-    // OpenAI API Key
-    $settings->add(new admin_setting_configtext(
+    // OpenAI API Key (password field — oculta el valor en pantalla)
+    $settings->add(new admin_setting_configpasswordunmask(
         'mod_aiassignment/openai_api_key',
         get_string('openaiapikey', 'mod_aiassignment'),
         get_string('openaiapikey_desc', 'mod_aiassignment'),
-        '',
-        PARAM_TEXT
+        ''
     ));
 
     // OpenAI Model
@@ -113,12 +112,11 @@ if ($ADMIN->fulltree) {
         'Obtén tu API key en <a href="https://rapidapi.com/judge0-official/api/judge0-ce" target="_blank">RapidAPI Judge0</a>.'
     ));
 
-    $settings->add(new admin_setting_configtext(
+    $settings->add(new admin_setting_configpasswordunmask(
         'mod_aiassignment/judge0_api_key',
         'Judge0 API Key',
         'Clave API de Judge0 (RapidAPI). Deja vacío para usar modo demo.',
-        '',
-        PARAM_TEXT
+        ''
     ));
 
     $settings->add(new admin_setting_configtext(

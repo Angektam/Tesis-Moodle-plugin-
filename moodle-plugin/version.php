@@ -9,7 +9,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component    = 'mod_aiassignment';   // Frankenstyle name
-$plugin->version      = 2026042400;           // YYYYMMDDXX
+$plugin->version      = 2026042500;           // YYYYMMDDXX
 $plugin->requires     = 2022041900;           // Moodle 4.0 minimum
 $plugin->maturity     = MATURITY_STABLE;
-$plugin->release      = '2.2.0';
+$plugin->release      = '2.3.0';

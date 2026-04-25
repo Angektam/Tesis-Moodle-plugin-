@@ -87,5 +87,20 @@ function xmldb_aiassignment_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026042004, 'aiassignment');
     }
 
+    if ($oldversion < 2026042500) {
+        // v2.3.0: Agregar columna exam_mode_local a aiassignment si no existe
+        $table = new xmldb_table('aiassignment');
+        $field = new xmldb_field('exam_mode_local', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        // Agregar columna use_rubric
+        $field2 = new xmldb_field('use_rubric', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        if (!$dbman->field_exists($table, $field2)) {
+            $dbman->add_field($table, $field2);
+        }
+        upgrade_mod_savepoint(true, 2026042500, 'aiassignment');
+    }
+
     return true;
 }
