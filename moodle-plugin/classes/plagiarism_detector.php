@@ -774,7 +774,72 @@ PROMPT;
             $techniques[] = 'Posible inserción de código muerto o padding';
         }
 
+        // Cambio de operadores equivalentes (i++ ↔ i+=1 ↔ i=i+1)
+        $ops1 = self::normalize_operators($c1);
+        $ops2 = self::normalize_operators($c2);
+        $ops_sim = self::jaccard(self::tokenize($ops1), self::tokenize($ops2)) * 100;
+        if ($ops_sim > 80 && $lex['jaccard'] < 60) {
+            $techniques[] = 'Cambio de operadores equivalentes (i++ ↔ i+=1)';
+        }
+
+        // Inserción de comentarios falsos (ratio de comentarios anormalmente alto)
+        $comment_ratio1 = self::comment_ratio($c1);
+        $comment_ratio2 = self::comment_ratio($c2);
+        if (abs($comment_ratio1 - $comment_ratio2) > 0.20 && $lex['score'] > 50) {
+            $techniques[] = 'Inserción de comentarios falsos (ratio inusual)';
+        }
+
+        // Cambio de nombres de funciones manteniendo lógica (léxica normalizada alta, raw baja)
+        if ($lex['score'] > 70 && $raw_lex < 35) {
+            if (!in_array('Renombrado de variables/funciones', $techniques)) {
+                $techniques[] = 'Renombrado de funciones/clases';
+            }
+        }
+
         return $techniques;
+    }
+
+    /**
+     * Normaliza operadores equivalentes para comparación.
+     * i++ → i+=1, i-- → i-=1, i=i+1 → i+=1, etc.
+     */
+    private static function normalize_operators(string $code): string {
+        // i++ / i-- → i+=1 / i-=1
+        $code = preg_replace('/(\w+)\+\+/', '$1+=1', $code);
+        $code = preg_replace('/(\w+)--/',   '$1-=1', $code);
+        $code = preg_replace('/\+\+(\w+)/', '$1+=1', $code);
+        $code = preg_replace('/--(\w+)/',   '$1-=1', $code);
+        // i = i + 1 → i+=1
+        $code = preg_replace('/(\w+)\s*=\s*\1\s*\+\s*1/', '$1+=1', $code);
+        $code = preg_replace('/(\w+)\s*=\s*\1\s*-\s*1/', '$1-=1', $code);
+        // true/True/TRUE → true
+        $code = preg_replace('/\bTrue\b|\bTRUE\b/', 'true', $code);
+        $code = preg_replace('/\bFalse\b|\bFALSE\b/', 'false', $code);
+        // None/null/NULL → null
+        $code = preg_replace('/\bNone\b|\bNULL\b/', 'null', $code);
+        return $code;
+    }
+
+    /**
+     * Calcula el ratio de comentarios en el código (0.0 - 1.0).
+     */
+    private static function comment_ratio(string $code): float {
+        $total_lines = max(1, substr_count($code, "\n") + 1);
+        $comment_lines = 0;
+        foreach (explode("\n", $code) as $line) {
+            $trimmed = ltrim($line);
+            if (
+                str_starts_with($trimmed, '//') ||
+                str_starts_with($trimmed, '#') ||
+                str_starts_with($trimmed, '*') ||
+                str_starts_with($trimmed, '/*') ||
+                str_starts_with($trimmed, '"""') ||
+                str_starts_with($trimmed, "'''")
+            ) {
+                $comment_lines++;
+            }
+        }
+        return $comment_lines / $total_lines;
     }
 
     // ─────────────────────────────────────────────────────────────────────

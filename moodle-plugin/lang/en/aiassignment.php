@@ -169,3 +169,55 @@ $string['startanalysis'] = 'Start Plagiarism Analysis';
 $string['plagiarismdetectionerror'] = 'Plagiarism detection error';
 $string['plagiarismdetectionfailed'] = 'Plagiarism detection failed';
 $string['noproblems'] = 'No problems available';
+
+// ── Improvements v2.4.0 ───────────────────────────────────────────────────
+
+// Bulk actions
+$string['bulk_reevaluate']       = 'Re-evaluate selected';
+$string['bulk_flag']             = 'Flag as plagiarism';
+$string['bulk_unflag']           = 'Unflag plagiarism';
+$string['bulk_select_all']       = 'Select all';
+$string['bulk_no_selection']     = 'No submissions selected';
+$string['bulk_confirm_reevaluate'] = 'Re-evaluate {$a} submission(s)? Previous grades will be replaced.';
+$string['bulk_confirm_flag']     = 'Flag {$a} submission(s) as plagiarism?';
+
+// Submission versioning
+$string['version_history']       = 'Version history';
+$string['version_reason']        = 'Change reason';
+$string['version_resubmit']     = 'Resubmission';
+$string['version_reevaluate']   = 'Re-evaluation';
+$string['version_manual']       = 'Manual grading';
+$string['no_versions']          = 'No previous versions';
+
+// Audit log
+$string['audit_log']            = 'Audit log';
+$string['audit_manual_grade']   = 'Manual grade';
+$string['audit_reevaluate']     = 'Re-evaluation';
+$string['audit_plagiarism_confirm'] = 'Plagiarism confirmed';
+$string['audit_plagiarism_dismiss'] = 'Plagiarism dismissed';
+$string['audit_resubmit']      = 'Resubmission requested';
+
+// OpenAI rate limiting
+$string['openai_rate_limit']    = 'API calls limit per hour';
+$string['openai_rate_limit_desc'] = 'Maximum OpenAI API calls per hour to prevent quota exhaustion (default: 100)';
+$string['openai_rate_exceeded'] = 'API call limit reached. Please try again later.';
+
+// Async plagiarism analysis
+$string['plagiarism_async_queued'] = 'Plagiarism analysis queued. You will be notified when complete.';
+$string['plagiarism_async_running'] = 'Analysis in progress...';
+
+// Accessibility
+$string['aria_score_high']      = 'High score';
+$string['aria_score_medium']    = 'Medium score';
+$string['aria_score_low']       = 'Low score';
+$string['aria_plagiarism_high'] = 'High plagiarism risk';
+$string['aria_plagiarism_medium'] = 'Medium plagiarism risk';
+$string['aria_plagiarism_low']  = 'Low plagiarism risk';
+$string['aria_dark_mode']       = 'Toggle dark/light theme';
+$string['aria_filter_status']   = 'Filter submissions by status';
+$string['aria_search_students'] = 'Search by student name';
+$string['aria_sort_column']     = 'Sort by this column';
+
+// Data cleanup
+$string['task_cleanup']         = 'Clean up old data';
+$string['task_analyze_plagiarism'] = 'Background plagiarism analysis';

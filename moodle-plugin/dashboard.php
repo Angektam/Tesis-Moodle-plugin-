@@ -596,16 +596,25 @@ echo "
 
 // ── Dark mode toggle ─────────────────────────────────────────
 echo '
-<button class="dark-mode-toggle" id="darkToggle" title="Cambiar tema" aria-label="Cambiar tema oscuro/claro">🌙</button>
+<button class="dark-mode-toggle" id="darkToggle" title="Cambiar tema" aria-label="' . get_string('aria_dark_mode', 'mod_aiassignment') . '" role="switch" aria-checked="false">🌙</button>
 <script>
 (function(){
     var btn = document.getElementById("darkToggle");
     var saved = localStorage.getItem("aiassignment_dark");
-    if (saved === "1") { document.body.classList.add("dark-mode"); btn.textContent = "☀️"; }
+    if (saved === "1") {
+        document.body.classList.add("dark-mode");
+        btn.textContent = "☀️";
+        btn.setAttribute("aria-checked", "true");
+    }
     btn.addEventListener("click", function(){
         var isDark = document.body.classList.toggle("dark-mode");
         btn.textContent = isDark ? "☀️" : "🌙";
+        btn.setAttribute("aria-checked", isDark ? "true" : "false");
         localStorage.setItem("aiassignment_dark", isDark ? "1" : "0");
+        // Persistir preferencia en servidor (mejora #10)
+        try {
+            fetch(M.cfg.wwwroot + "/mod/aiassignment/poll.php?dark_mode=" + (isDark ? 1 : 0) + "&sesskey=" + M.cfg.sesskey);
+        } catch(e) {}
     });
 })();
 </script>';

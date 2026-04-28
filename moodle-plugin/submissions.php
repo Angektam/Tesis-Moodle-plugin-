@@ -28,9 +28,27 @@ echo $OUTPUT->heading(get_string('allsubmissions', 'aiassignment'));
 // ── Paginación real con LIMIT/OFFSET (no carga todo en memoria) ──────────
 $perpage = 20;
 $page    = optional_param('page', 0, PARAM_INT);
+$status_filter = optional_param('status_filter', '', PARAM_ALPHA);
+$search  = optional_param('search', '', PARAM_TEXT);
 
-// Contar total sin traer registros
-$total = $DB->count_records('aiassignment_submissions', ['assignment' => $aiassignment->id]);
+// Contar total con filtros server-side (mejora #9)
+$where_parts = ['s.assignment = :assignment'];
+$params = ['assignment' => $aiassignment->id];
+
+if ($status_filter !== '') {
+    $where_parts[] = 's.status = :status';
+    $params['status'] = $status_filter;
+}
+
+$join_user = 'JOIN {user} u ON s.userid = u.id';
+if ($search !== '') {
+    $where_parts[] = $DB->sql_like($DB->sql_concat('u.firstname', "' '", 'u.lastname'), ':search', false);
+    $params['search'] = '%' . $DB->sql_like_escape($search) . '%';
+}
+
+$where_sql = implode(' AND ', $where_parts);
+$total = $DB->count_records_sql(
+    "SELECT COUNT(*) FROM {aiassignment_submissions} s $join_user WHERE $where_sql", $params);
 
 if ($total === 0) {
     echo $OUTPUT->notification(get_string('nosubmissions', 'aiassignment'), 'info');
@@ -39,13 +57,13 @@ if ($total === 0) {
     exit;
 }
 
-// Solo traer la página actual
+// Solo traer la página actual con filtros server-side
 $sql = "SELECT s.*, u.firstname, u.lastname, u.email
         FROM {aiassignment_submissions} s
-        JOIN {user} u ON s.userid = u.id
-        WHERE s.assignment = :assignment
+        $join_user
+        WHERE $where_sql
         ORDER BY s.timecreated DESC";
-$submissions_paged = $DB->get_records_sql($sql, ['assignment' => $aiassignment->id],
+$submissions_paged = $DB->get_records_sql($sql, $params,
     $page * $perpage, $perpage);
 
 // Para estadísticas y ranking de plagio solo necesitamos IDs/scores, no el contenido
@@ -68,6 +86,9 @@ try {
 $table = new html_table();
 $table->attributes['class'] = 'generaltable mod_index';
 $table->head = array(
+    html_writer::tag('input', '', ['type' => 'checkbox', 'id' => 'select-all',
+        'aria-label' => get_string('bulk_select_all', 'aiassignment'),
+        'onchange' => 'toggleSelectAll(this.checked)']),
     get_string('student', 'aiassignment'),
     get_string('submitted', 'aiassignment'),
     get_string('attempt', 'aiassignment'),
@@ -76,7 +97,7 @@ $table->head = array(
     '🔍 Plagio',
     get_string('actions', 'aiassignment')
 );
-$table->align = array('left', 'left', 'center', 'center', 'center', 'center', 'center');
+$table->align = array('center', 'left', 'left', 'center', 'center', 'center', 'center', 'center');
 
 foreach ($submissions_paged as $submission) {
     $student  = fullname($submission);
@@ -95,16 +116,26 @@ foreach ($submissions_paged as $submission) {
     // Calificación
     $score = ($submission->score !== null) ? round($submission->score, 2) . '%' : '-';
 
-    // Porcentaje de plagio — leer desde plagiarism_by_user (evaluaciones)
+    // Plagio con aria-label para accesibilidad (mejora #15)
     $plagiarism_pct = '-';
     if (isset($plagiarism_by_user[$submission->userid])) {
         $pct = round($plagiarism_by_user[$submission->userid], 1);
         $color = ($pct >= 70) ? '#dc3545' : (($pct >= 40) ? '#856404' : '#155724');
+        $aria = ($pct >= 70) ? get_string('aria_plagiarism_high', 'aiassignment')
+              : (($pct >= 40) ? get_string('aria_plagiarism_medium', 'aiassignment')
+              : get_string('aria_plagiarism_low', 'aiassignment'));
         $plagiarism_pct = html_writer::tag('span',
             $pct . '%',
-            array('style' => "font-weight:600; color:{$color};")
+            array('style' => "font-weight:600; color:{$color};", 'aria-label' => $aria, 'role' => 'status')
         );
     }
+
+    // Checkbox para acciones en lote
+    $checkbox = html_writer::tag('input', '', [
+        'type' => 'checkbox', 'class' => 'bulk-check', 'value' => $submission->id,
+        'aria-label' => 'Seleccionar envío de ' . fullname($submission),
+        'onchange' => 'updateBulkButtons()',
+    ]);
 
     // Acción: botón Ver funcional
     $view_url = new moodle_url('/mod/aiassignment/submission.php', array('id' => $submission->id));
@@ -130,13 +161,15 @@ foreach ($submissions_paged as $submission) {
         ['id' => $cm->id, 'nosem' => 1]);
     $actions .= ' ' . $resubmit_btn;
 
-    $table->data[] = array($student, $submitted, $attempt, $status, $score, $plagiarism_pct, $actions);
+    $table->data[] = array($checkbox, $student, $submitted, $attempt, $status, $score, $plagiarism_pct, $actions);
 }
 
-// Filtro de estado (Mejora 5)
-$status_filter = optional_param('status_filter', '', PARAM_ALPHA);
-echo html_writer::start_div('', ['style' => 'display:flex;gap:10px;margin-bottom:10px;align-items:center;flex-wrap:wrap;']);
-echo html_writer::tag('label', 'Estado:', ['style' => 'font-size:13px;font-weight:600;color:#666;']);
+// Filtro de estado server-side (mejora #9) y búsqueda
+echo html_writer::start_tag('form', ['method' => 'get', 'id' => 'filter-form',
+    'style' => 'display:flex;gap:10px;margin-bottom:10px;align-items:center;flex-wrap:wrap;']);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'id', 'value' => $cm->id]);
+echo html_writer::tag('label', 'Estado:', ['for' => 'status-filter',
+    'style' => 'font-size:13px;font-weight:600;color:#666;']);
 $status_options = [
     ''          => 'Todos',
     'evaluated' => '✅ Evaluados',
@@ -144,9 +177,10 @@ $status_options = [
     'flagged'   => '📩 Re-envío solicitado',
 ];
 $status_select = html_writer::start_tag('select', [
-    'id' => 'status-filter',
+    'id' => 'status-filter', 'name' => 'status_filter',
+    'aria-label' => get_string('aria_filter_status', 'aiassignment'),
     'style' => 'padding:7px 12px;border-radius:8px;border:1px solid #dee2e6;font-size:13px;',
-    'onchange' => 'filterByStatus(this.value)'
+    'onchange' => 'this.form.submit()'
 ]);
 foreach ($status_options as $val => $label) {
     $attrs = ['value' => $val];
@@ -155,23 +189,51 @@ foreach ($status_options as $val => $label) {
 }
 $status_select .= html_writer::end_tag('select');
 echo $status_select;
-echo html_writer::end_div();
 
 echo html_writer::tag('input', '', [
-    'type' => 'text',
-    'id'   => 'search-submissions',
-    'placeholder' => '🔍 Buscar por nombre de estudiante...',
-    'style' => 'width:100%; padding:10px 14px; border-radius:8px; border:1px solid #dee2e6;
-                font-size:14px; margin-bottom:4px; box-shadow:0 1px 3px rgba(0,0,0,.06);',
-    'oninput' => "filterTable(this.value)"
+    'type' => 'text', 'name' => 'search', 'value' => $search,
+    'placeholder' => '🔍 Buscar por nombre...',
+    'aria-label' => get_string('aria_search_students', 'aiassignment'),
+    'style' => 'flex:1;min-width:200px;padding:7px 12px;border-radius:8px;border:1px solid #dee2e6;font-size:13px;',
 ]);
-echo html_writer::tag('span', '', ['id' => 'search-counter', 'style' => 'font-size:12px;color:#888;margin-left:8px;display:block;margin-bottom:10px;']);
+echo html_writer::tag('button', '🔍 Buscar', [
+    'type' => 'submit', 'class' => 'btn btn-sm btn-primary']);
+if ($search !== '' || $status_filter !== '') {
+    echo html_writer::link(
+        new moodle_url('/mod/aiassignment/submissions.php', ['id' => $cm->id]),
+        '✕ Limpiar', ['class' => 'btn btn-sm btn-outline-secondary']);
+}
+echo html_writer::end_tag('form');
+
+// Acciones en lote (mejora #14)
+echo html_writer::start_tag('form', ['method' => 'post', 'id' => 'bulk-form',
+    'action' => (new moodle_url('/mod/aiassignment/bulk_actions.php', ['id' => $cm->id]))->out(false)]);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'id', 'value' => $cm->id]);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sids', 'id' => 'bulk-sids', 'value' => '']);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'id' => 'bulk-action', 'value' => '']);
+
+echo html_writer::start_div('', ['style' => 'display:flex;gap:8px;margin-bottom:10px;']);
+echo html_writer::tag('button', '🔄 ' . get_string('bulk_reevaluate', 'aiassignment'), [
+    'type' => 'button', 'class' => 'btn btn-sm btn-outline-primary',
+    'onclick' => "submitBulk('reevaluate')", 'disabled' => 'disabled', 'id' => 'btn-bulk-reeval']);
+echo html_writer::tag('button', '🚩 ' . get_string('bulk_flag', 'aiassignment'), [
+    'type' => 'button', 'class' => 'btn btn-sm btn-outline-danger',
+    'onclick' => "submitBulk('flag')", 'disabled' => 'disabled', 'id' => 'btn-bulk-flag']);
+echo html_writer::tag('button', '✅ ' . get_string('bulk_unflag', 'aiassignment'), [
+    'type' => 'button', 'class' => 'btn btn-sm btn-outline-success',
+    'onclick' => "submitBulk('unflag')", 'disabled' => 'disabled', 'id' => 'btn-bulk-unflag']);
+echo html_writer::end_div();
 
 echo html_writer::table($table);
+echo html_writer::end_tag('form'); // bulk-form
 
-// Paginación
+// Paginación con filtros preservados
 if ($total > $perpage) {
-    $paging_url = new moodle_url('/mod/aiassignment/submissions.php', ['id' => $cm->id]);
+    $paging_params = ['id' => $cm->id];
+    if ($status_filter !== '') $paging_params['status_filter'] = $status_filter;
+    if ($search !== '') $paging_params['search'] = $search;
+    $paging_url = new moodle_url('/mod/aiassignment/submissions.php', $paging_params);
     echo $OUTPUT->paging_bar($total, $page, $perpage, $paging_url);
 }
 
@@ -248,6 +310,8 @@ echo html_writer::tag('p',
 
 $rtable = new html_table();
 $rtable->attributes['class'] = 'generaltable';
+$rtable->attributes['role'] = 'table';
+$rtable->attributes['aria-label'] = 'Ranking de alumnos por porcentaje de plagio';
 $rtable->head  = array('#', 'Alumno', 'Porcentaje de Plagio', 'Nivel de Riesgo');
 $rtable->align = array('center', 'left', 'center', 'center');
 
@@ -297,22 +361,33 @@ echo $OUTPUT->box_end();
 echo $OUTPUT->continue_button(new moodle_url('/mod/aiassignment/view.php', array('id' => $cm->id)));
 
 echo html_writer::tag('script', "
-function filterTable(query) {
-    query = query.toLowerCase().trim();
-    var rows = document.querySelectorAll('.mod_index tbody tr');
-    var visible = 0;
-    rows.forEach(function(row) {
-        var name = row.cells[0] ? row.cells[0].textContent.toLowerCase() : '';
-        var show = !query || name.includes(query);
-        row.style.display = show ? '' : 'none';
-        if (show) visible++;
+function toggleSelectAll(checked) {
+    document.querySelectorAll('.bulk-check').forEach(function(cb) { cb.checked = checked; });
+    updateBulkButtons();
+}
+function updateBulkButtons() {
+    var checked = document.querySelectorAll('.bulk-check:checked').length;
+    ['btn-bulk-reeval','btn-bulk-flag','btn-bulk-unflag'].forEach(function(id) {
+        document.getElementById(id).disabled = checked === 0;
     });
-    var counter = document.getElementById('search-counter');
-    if (counter) counter.textContent = query ? visible + ' resultado(s)' : '';
+}
+function submitBulk(action) {
+    var ids = [];
+    document.querySelectorAll('.bulk-check:checked').forEach(function(cb) { ids.push(cb.value); });
+    if (!ids.length) return;
+    var msgs = {
+        reevaluate: '¿Re-evaluar ' + ids.length + ' envío(s)?',
+        flag: '¿Marcar ' + ids.length + ' envío(s) como plagio?',
+        unflag: '¿Desmarcar ' + ids.length + ' envío(s)?'
+    };
+    if (!confirm(msgs[action])) return;
+    document.getElementById('bulk-sids').value = ids.join(',');
+    document.getElementById('bulk-action').value = action;
+    document.getElementById('bulk-form').submit();
 }
 ");
 
-// Mejora 4: Ordenar tabla por columna
+// Mejora 4: Ordenar tabla por columna (con aria-labels)
 echo html_writer::tag('script', "
 document.addEventListener('DOMContentLoaded', function() {
     var table = document.querySelector('.mod_index');
@@ -320,9 +395,12 @@ document.addEventListener('DOMContentLoaded', function() {
     var headers = table.querySelectorAll('th');
     var sortDir = {};
     headers.forEach(function(th, idx) {
-        if (idx >= headers.length - 1) return;
+        if (idx === 0 || idx >= headers.length - 1) return; // Skip checkbox and actions
         th.style.cursor = 'pointer';
         th.title = 'Clic para ordenar';
+        th.setAttribute('aria-label', th.textContent.trim() + ' - clic para ordenar');
+        th.setAttribute('role', 'button');
+        th.setAttribute('tabindex', '0');
         th.addEventListener('click', function() {
             var asc = !sortDir[idx];
             sortDir[idx] = asc;
@@ -344,22 +422,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
-");
-
-// Mejora 5: Filtro por estado
-echo html_writer::tag('script', "
-function filterByStatus(status) {
-    var rows = document.querySelectorAll('.mod_index tbody tr');
-    rows.forEach(function(row) {
-        if (!status) { row.style.display = ''; return; }
-        var statusCell = row.cells[3] ? row.cells[3].textContent.toLowerCase() : '';
-        var show = false;
-        if (status === 'evaluated' && statusCell.includes('evaluad')) show = true;
-        else if (status === 'pending' && statusCell.includes('pendiente')) show = true;
-        else if (status === 'flagged' && (statusCell.includes('re-env') || statusCell.includes('solicit'))) show = true;
-        row.style.display = show ? '' : 'none';
-    });
-}
 ");
 
 echo $OUTPUT->footer();

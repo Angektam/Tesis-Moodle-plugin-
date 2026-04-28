@@ -24,6 +24,12 @@
         <FIELD NAME="test_cases"   TYPE="text"              NOTNULL="false"                SEQUENCE="false"/>
         <FIELD NAME="grade"        TYPE="int"  LENGTH="10"  NOTNULL="true"  DEFAULT="100"  SEQUENCE="false"/>
         <FIELD NAME="maxattempts"  TYPE="int"  LENGTH="6"   NOTNULL="true"  DEFAULT="0"    SEQUENCE="false" COMMENT="0 = unlimited"/>
+        <FIELD NAME="use_rubric"   TYPE="int"  LENGTH="1"   NOTNULL="true"  DEFAULT="0"    SEQUENCE="false" COMMENT="1 = use custom rubric"/>
+        <FIELD NAME="rubric_funcionalidad" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="40" SEQUENCE="false"/>
+        <FIELD NAME="rubric_estilo"        TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="20" SEQUENCE="false"/>
+        <FIELD NAME="rubric_eficiencia"    TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="20" SEQUENCE="false"/>
+        <FIELD NAME="rubric_documentacion" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="20" SEQUENCE="false"/>
+        <FIELD NAME="exam_mode_local" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="1 = exam mode for this assignment"/>
         <FIELD NAME="timecreated"  TYPE="int"  LENGTH="10"  NOTNULL="true"  DEFAULT="0"    SEQUENCE="false"/>
         <FIELD NAME="timemodified" TYPE="int"  LENGTH="10"  NOTNULL="true"  DEFAULT="0"    SEQUENCE="false"/>
       </FIELDS>
@@ -169,6 +175,55 @@
       <KEYS><KEY NAME="primary" TYPE="primary" FIELDS="id"/></KEYS>
       <INDEXES>
         <INDEX NAME="reviewer_sub" UNIQUE="false" FIELDS="reviewer_id, submission_id"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         aiassignment_sub_versions — Historial de versiones de submissions (mejora #7)
+    ════════════════════════════════════════════════════════════ -->
+    <TABLE NAME="aiassignment_sub_versions" COMMENT="Submission version history for tracking changes">
+      <FIELDS>
+        <FIELD NAME="id"            TYPE="int"    LENGTH="10"  NOTNULL="true"              SEQUENCE="true"/>
+        <FIELD NAME="submission_id" TYPE="int"    LENGTH="10"  NOTNULL="true"  DEFAULT="0" SEQUENCE="false" COMMENT="FK → aiassignment_submissions.id"/>
+        <FIELD NAME="userid"        TYPE="int"    LENGTH="10"  NOTNULL="true"  DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="answer"        TYPE="text"                NOTNULL="true"              SEQUENCE="false"/>
+        <FIELD NAME="score"         TYPE="number" LENGTH="5"   NOTNULL="false" DECIMALS="2" SEQUENCE="false"/>
+        <FIELD NAME="feedback"      TYPE="text"                NOTNULL="false"             SEQUENCE="false"/>
+        <FIELD NAME="status"        TYPE="char"   LENGTH="20"  NOTNULL="true"  DEFAULT="pending" SEQUENCE="false"/>
+        <FIELD NAME="attempt"       TYPE="int"    LENGTH="6"   NOTNULL="true"  DEFAULT="1" SEQUENCE="false"/>
+        <FIELD NAME="reason"        TYPE="char"   LENGTH="50"  NOTNULL="true"  DEFAULT="resubmit" SEQUENCE="false" COMMENT="resubmit | reevaluate | manual_grade"/>
+        <FIELD NAME="timecreated"   TYPE="int"    LENGTH="10"  NOTNULL="true"  DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"       TYPE="primary" FIELDS="id"/>
+        <KEY NAME="submission_id" TYPE="foreign" FIELDS="submission_id" REFTABLE="aiassignment_submissions" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="sub_time" UNIQUE="false" FIELDS="submission_id, timecreated"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         aiassignment_audit_log — Registro de auditoría (mejora #12)
+    ════════════════════════════════════════════════════════════ -->
+    <TABLE NAME="aiassignment_audit_log" COMMENT="Audit trail for important actions">
+      <FIELDS>
+        <FIELD NAME="id"          TYPE="int"  LENGTH="10"  NOTNULL="true"              SEQUENCE="true"/>
+        <FIELD NAME="action"      TYPE="char" LENGTH="50"  NOTNULL="true"              SEQUENCE="false"/>
+        <FIELD NAME="userid"      TYPE="int"  LENGTH="10"  NOTNULL="true"  DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="targetid"    TYPE="int"  LENGTH="10"  NOTNULL="true"  DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="targettype"  TYPE="char" LENGTH="30"  NOTNULL="true"  DEFAULT="submission" SEQUENCE="false"/>
+        <FIELD NAME="ip"          TYPE="char" LENGTH="45"  NOTNULL="false"             SEQUENCE="false"/>
+        <FIELD NAME="data"        TYPE="text"              NOTNULL="false"             SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int"  LENGTH="10"  NOTNULL="true"  DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="target"      UNIQUE="false" FIELDS="targetid, targettype"/>
+        <INDEX NAME="action_time" UNIQUE="false" FIELDS="action, timecreated"/>
+        <INDEX NAME="userid_time" UNIQUE="false" FIELDS="userid, timecreated"/>
       </INDEXES>
     </TABLE>
 

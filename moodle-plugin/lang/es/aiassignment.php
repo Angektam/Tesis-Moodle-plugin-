@@ -234,3 +234,55 @@ $string['notif_resubmit_title']  = '📩 Re-envío solicitado';
 $string['multifile_label']  = 'Archivos adicionales (opcional)';
 $string['multifile_hint']   = 'Máx. 10 archivos · 2MB c/u';
 $string['multifile_drop']   = 'Arrastra archivos aquí o selecciona';
+
+// ── Mejoras v2.4.0 ────────────────────────────────────────────────────────
+
+// Acciones en lote (mejora #14)
+$string['bulk_reevaluate']       = 'Re-evaluar seleccionados';
+$string['bulk_flag']             = 'Marcar como plagio';
+$string['bulk_unflag']           = 'Desmarcar plagio';
+$string['bulk_select_all']       = 'Seleccionar todos';
+$string['bulk_no_selection']     = 'No se seleccionaron envíos';
+$string['bulk_confirm_reevaluate'] = '¿Re-evaluar {$a} envío(s)? La calificación anterior será reemplazada.';
+$string['bulk_confirm_flag']     = '¿Marcar {$a} envío(s) como plagio?';
+
+// Versionado de submissions (mejora #7)
+$string['version_history']       = 'Historial de versiones';
+$string['version_reason']        = 'Razón del cambio';
+$string['version_resubmit']     = 'Re-envío';
+$string['version_reevaluate']   = 'Re-evaluación';
+$string['version_manual']       = 'Calificación manual';
+$string['no_versions']          = 'Sin versiones anteriores';
+
+// Auditoría (mejora #12)
+$string['audit_log']            = 'Registro de auditoría';
+$string['audit_manual_grade']   = 'Calificación manual';
+$string['audit_reevaluate']     = 'Re-evaluación';
+$string['audit_plagiarism_confirm'] = 'Plagio confirmado';
+$string['audit_plagiarism_dismiss'] = 'Plagio descartado';
+$string['audit_resubmit']      = 'Re-envío solicitado';
+
+// Rate limiting OpenAI (mejora #2)
+$string['openai_rate_limit']    = 'Límite de llamadas API por hora';
+$string['openai_rate_limit_desc'] = 'Máximo de llamadas a OpenAI por hora para evitar agotar la cuota (default: 100)';
+$string['openai_rate_exceeded'] = 'Se alcanzó el límite de llamadas a la API. Intente más tarde.';
+
+// Análisis asíncrono de plagio (mejora #5)
+$string['plagiarism_async_queued'] = 'Análisis de plagio encolado. Recibirá una notificación cuando termine.';
+$string['plagiarism_async_running'] = 'Análisis en progreso...';
+
+// Accesibilidad (mejora #15)
+$string['aria_score_high']      = 'Calificación alta';
+$string['aria_score_medium']    = 'Calificación media';
+$string['aria_score_low']       = 'Calificación baja';
+$string['aria_plagiarism_high'] = 'Riesgo de plagio alto';
+$string['aria_plagiarism_medium'] = 'Riesgo de plagio medio';
+$string['aria_plagiarism_low']  = 'Riesgo de plagio bajo';
+$string['aria_dark_mode']       = 'Cambiar entre tema claro y oscuro';
+$string['aria_filter_status']   = 'Filtrar envíos por estado';
+$string['aria_search_students'] = 'Buscar por nombre de estudiante';
+$string['aria_sort_column']     = 'Ordenar por esta columna';
+
+// Limpieza de datos (mejora: retención)
+$string['task_cleanup']         = 'Limpieza de datos antiguos';
+$string['task_analyze_plagiarism'] = 'Análisis de plagio en background';

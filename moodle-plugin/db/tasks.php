@@ -7,7 +7,14 @@ defined('MOODLE_INTERNAL') || die();
  * Registro de tareas programadas y adhoc para mod_aiassignment.
  */
 $tasks = [
-    // Tarea adhoc: evaluar envíos en background (mejora #2)
-    // Se encola automáticamente desde submit.php cuando async_evaluation está activo.
-    // No tiene schedule fijo — se ejecuta en el próximo ciclo del cron.
+    // Tarea programada: limpieza de datos antiguos (mejora: retención de datos)
+    [
+        'classname' => 'mod_aiassignment\task\cleanup_old_data',
+        'blocking'  => 0,
+        'minute'    => '0',
+        'hour'      => '3',
+        'day'       => '*',
+        'month'     => '*',
+        'dayofweek' => '0', // Domingos a las 3:00 AM
+    ],
 ];

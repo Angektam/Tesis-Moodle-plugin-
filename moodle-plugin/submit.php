@@ -117,6 +117,25 @@ if ($tab_switches > 0) {
     $DB->update_record('aiassignment_submissions', $submission);
 }
 
+// ── Análisis de comportamiento del editor (behavior tracker) ─────────────
+$editor_events_raw = optional_param('editor_events', '', PARAM_RAW);
+if (!empty($editor_events_raw)) {
+    $events = json_decode($editor_events_raw, true);
+    if (is_array($events) && !empty($events)) {
+        $behavior = \mod_aiassignment\behavior_tracker::analyze($events, $answer);
+        if ($behavior['suspicious']) {
+            $signals_str = implode('; ', $behavior['signals']);
+            $behavior_note = ' [⚠️ COMPORTAMIENTO: ' . $signals_str .
+                ' | Pegados: ' . $behavior['paste_count'] .
+                ' | Ratio: ' . $behavior['paste_ratio'] . '%' .
+                ' | Velocidad: ' . $behavior['typing_speed'] . ' cpm' .
+                ' | Tiempo: ' . $behavior['time_spent_s'] . 's]';
+            $submission->feedback = ($submission->feedback ?? '') . $behavior_note;
+            $DB->update_record('aiassignment_submissions', $submission);
+        }
+    }
+}
+
 // ── Evaluar: asíncrono si hay cron, síncrono como fallback ───────────────
 $async_mode = (bool)get_config('mod_aiassignment', 'async_evaluation');
 
@@ -132,10 +151,36 @@ if ($async_mode) {
 } else {
     // Evaluación síncrona (comportamiento original)
     try {
+        // ── Construir rúbrica personalizada si la tarea la tiene ──────
+        $rubric = null;
+        if (!empty($aiassignment->use_rubric)) {
+            $rubric = [];
+            $rubric_fields = [
+                'rubric_funcionalidad' => 'Funcionalidad',
+                'rubric_estilo'        => 'Estilo y claridad',
+                'rubric_eficiencia'    => 'Eficiencia',
+                'rubric_documentacion' => 'Documentación',
+            ];
+            $total_weight = 0;
+            foreach ($rubric_fields as $field => $label) {
+                $weight = (int)($aiassignment->$field ?? 0);
+                if ($weight > 0) {
+                    $key = str_replace('rubric_', '', $field);
+                    $rubric[$key] = ['weight' => $weight, 'label' => $label];
+                    $total_weight += $weight;
+                }
+            }
+            // Si los pesos no suman 100, usar rúbrica por defecto
+            if ($total_weight < 90 || $total_weight > 110) {
+                $rubric = null;
+            }
+        }
+
         $evaluation = \mod_aiassignment\ai_evaluator::evaluate(
             $answer,
             $aiassignment->solution,
-            $aiassignment->type
+            $aiassignment->type,
+            $rubric
         );
 
         // Guardar evaluación

@@ -33,10 +33,35 @@ class evaluate_submission extends \core\task\adhoc_task {
             ['id' => $submission->assignment], '*', MUST_EXIST);
 
         try {
+            // ── Construir rúbrica personalizada si la tarea la tiene ──
+            $rubric = null;
+            if (!empty($aiassignment->use_rubric)) {
+                $rubric = [];
+                $rubric_fields = [
+                    'rubric_funcionalidad' => 'Funcionalidad',
+                    'rubric_estilo'        => 'Estilo y claridad',
+                    'rubric_eficiencia'    => 'Eficiencia',
+                    'rubric_documentacion' => 'Documentación',
+                ];
+                $total_weight = 0;
+                foreach ($rubric_fields as $field => $label) {
+                    $weight = (int)($aiassignment->$field ?? 0);
+                    if ($weight > 0) {
+                        $key = str_replace('rubric_', '', $field);
+                        $rubric[$key] = ['weight' => $weight, 'label' => $label];
+                        $total_weight += $weight;
+                    }
+                }
+                if ($total_weight < 90 || $total_weight > 110) {
+                    $rubric = null;
+                }
+            }
+
             $evaluation = \mod_aiassignment\ai_evaluator::evaluate(
                 $submission->answer,
                 $aiassignment->solution,
-                $aiassignment->type
+                $aiassignment->type,
+                $rubric
             );
 
             // Guardar evaluación

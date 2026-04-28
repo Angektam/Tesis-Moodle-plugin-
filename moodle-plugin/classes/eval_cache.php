@@ -64,11 +64,18 @@ class eval_cache {
     }
 
     /**
+     * Invalida la caché para un envío específico (forzar re-evaluación).
+     */
+    public static function invalidate(string $answer, string $solution, string $type): void {
+        $cache = \cache::make('mod_aiassignment', 'evaluations');
+        $key   = self::make_key($answer, $solution, $type);
+        $cache->delete($key);
+    }
+
+    /**
      * Invalida caché para un assignment específico (cuando cambia la solución).
      */
     public static function invalidate_assignment(int $assignmentid): void {
-        // Moodle cache no soporta invalidación por prefijo directamente,
-        // pero podemos purgar toda la caché de evaluaciones
         $cache = \cache::make('mod_aiassignment', 'evaluations');
         $cache->purge();
     }

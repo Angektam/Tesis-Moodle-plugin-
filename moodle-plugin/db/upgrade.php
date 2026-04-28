@@ -99,7 +99,61 @@ function xmldb_aiassignment_upgrade($oldversion) {
         if (!$dbman->field_exists($table, $field2)) {
             $dbman->add_field($table, $field2);
         }
+        // Agregar campos de pesos de rúbrica
+        $rubric_fields = [
+            'rubric_funcionalidad' => '40',
+            'rubric_estilo'        => '20',
+            'rubric_eficiencia'    => '20',
+            'rubric_documentacion' => '20',
+        ];
+        foreach ($rubric_fields as $fname => $default) {
+            $rf = new xmldb_field($fname, XMLDB_TYPE_INTEGER, '3', null, XMLDB_NOTNULL, null, $default);
+            if (!$dbman->field_exists($table, $rf)) {
+                $dbman->add_field($table, $rf);
+            }
+        }
         upgrade_mod_savepoint(true, 2026042500, 'aiassignment');
+    }
+
+    if ($oldversion < 2026042800) {
+        // v2.4.0: Tabla de versiones de submissions (mejora #7)
+        $table = new xmldb_table('aiassignment_sub_versions');
+        if (!$dbman->table_exists($table)) {
+            $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+            $table->add_field('submission_id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $table->add_field('answer', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL);
+            $table->add_field('score', XMLDB_TYPE_NUMBER, '5', 2);
+            $table->add_field('feedback', XMLDB_TYPE_TEXT);
+            $table->add_field('status', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, 'pending');
+            $table->add_field('attempt', XMLDB_TYPE_INTEGER, '6', null, XMLDB_NOTNULL, null, '1');
+            $table->add_field('reason', XMLDB_TYPE_CHAR, '50', null, XMLDB_NOTNULL, null, 'resubmit');
+            $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+            $table->add_key('submission_id', XMLDB_KEY_FOREIGN, ['submission_id'], 'aiassignment_submissions', ['id']);
+            $table->add_index('sub_time', XMLDB_INDEX_NOTUNIQUE, ['submission_id', 'timecreated']);
+            $dbman->create_table($table);
+        }
+
+        // v2.4.0: Tabla de auditoría (mejora #12)
+        $table2 = new xmldb_table('aiassignment_audit_log');
+        if (!$dbman->table_exists($table2)) {
+            $table2->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+            $table2->add_field('action', XMLDB_TYPE_CHAR, '50', null, XMLDB_NOTNULL);
+            $table2->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $table2->add_field('targetid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $table2->add_field('targettype', XMLDB_TYPE_CHAR, '30', null, XMLDB_NOTNULL, null, 'submission');
+            $table2->add_field('ip', XMLDB_TYPE_CHAR, '45');
+            $table2->add_field('data', XMLDB_TYPE_TEXT);
+            $table2->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+            $table2->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+            $table2->add_index('target', XMLDB_INDEX_NOTUNIQUE, ['targetid', 'targettype']);
+            $table2->add_index('action_time', XMLDB_INDEX_NOTUNIQUE, ['action', 'timecreated']);
+            $table2->add_index('userid_time', XMLDB_INDEX_NOTUNIQUE, ['userid', 'timecreated']);
+            $dbman->create_table($table2);
+        }
+
+        upgrade_mod_savepoint(true, 2026042800, 'aiassignment');
     }
 
     return true;

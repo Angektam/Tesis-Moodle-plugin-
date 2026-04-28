@@ -178,56 +178,108 @@ if ($submission->status == 'evaluated' && $submission->score !== null) {
     if ($evaluation && $evaluation->ai_analysis) {
         echo html_writer::tag('h4', get_string('aianalysis', 'aiassignment'));
 
-        // Mejora 7: Feedback expandible por sección
         $raw_analysis = $evaluation->ai_analysis;
-        $sections_map = [
-            'Funcionalidad'    => '⚙️',
-            'Estilo'           => '🎨',
-            'Eficiencia'       => '⚡',
-            'Buenas prácticas' => '✅',
-            'Buenas Prácticas' => '✅',
-        ];
 
-        // Intentar detectar secciones en el texto
-        $found_sections = [];
-        foreach ($sections_map as $section_name => $emoji) {
-            // Buscar "Sección:" o "**Sección**" o "Sección\n"
-            if (preg_match('/' . preg_quote($section_name, '/') . '\s*[:\*\n]/i', $raw_analysis)) {
-                $found_sections[$section_name] = $emoji;
-            }
+        // ── Confianza de la evaluación ────────────────────────────────
+        $analysis_data = json_decode($raw_analysis, true);
+        if (is_array($analysis_data) && isset($analysis_data['confidence'])) {
+            echo '<div style="margin-bottom:10px;">';
+            echo \mod_aiassignment\ai_evaluator::render_confidence((int)$analysis_data['confidence']);
+            echo '</div>';
         }
 
-        if (!empty($found_sections)) {
-            // Dividir el texto por las secciones encontradas
-            $pattern = '/(' . implode('|', array_map(fn($s) => preg_quote($s, '/'), array_keys($found_sections))) . ')\s*[:\*]?\s*/i';
-            $parts   = preg_split($pattern, $raw_analysis, -1, PREG_SPLIT_DELIM_CAPTURE);
+        // ── Errores específicos detectados ────────────────────────────
+        if (is_array($analysis_data) && !empty($analysis_data['errors'])) {
+            echo \mod_aiassignment\ai_evaluator::render_errors($analysis_data['errors']);
+        }
 
-            echo html_writer::start_div('analysis-sections');
-            $i = 0;
-            // First part before any section (intro text)
-            if (!empty(trim($parts[0]))) {
-                echo html_writer::tag('div', nl2br(s(trim($parts[0]))),
-                    ['class' => 'analysis-intro', 'style' => 'margin-bottom:8px; font-size:0.9rem;']);
+        // ── Desglose de rúbrica si existe ─────────────────────────────
+        if (is_array($analysis_data) && !empty($analysis_data['rubric_breakdown'])) {
+            $rubric_result = ['breakdown' => $analysis_data['rubric_breakdown'],
+                              'total_score' => $submission->score];
+            echo \mod_aiassignment\rubric_evaluator::render_breakdown($rubric_result);
+        }
+
+        // ── Historial de re-evaluaciones ──────────────────────────────
+        if (is_array($analysis_data) && !empty($analysis_data['reeval_history'])) {
+            echo '<details style="margin-top:12px;border:1px solid #dee2e6;border-radius:6px;">';
+            echo '<summary style="padding:8px 12px;cursor:pointer;background:#f8f9fa;border-radius:6px;font-size:13px;font-weight:600;">🔄 Historial de re-evaluaciones (' . count($analysis_data['reeval_history']) . ')</summary>';
+            echo '<div style="padding:10px 14px;">';
+            foreach (array_reverse($analysis_data['reeval_history']) as $rev) {
+                $rev_user = $DB->get_record('user', ['id' => $rev['reevaluated_by'] ?? 0], 'firstname,lastname');
+                $rev_name = $rev_user ? fullname($rev_user) : 'Sistema';
+                $rev_score = round($rev['score'] ?? 0, 1);
+                $rev_rubric = !empty($rev['used_rubric']) ? ' 📋' : '';
+                echo '<div style="font-size:12px;color:#666;padding:4px 0;border-bottom:1px solid #f0f0f0;">';
+                echo userdate($rev['reevaluated_at'] ?? 0, '%d/%m/%Y %H:%M') . ' — ';
+                echo html_writer::tag('strong', $rev_name) . ': ';
+                echo html_writer::tag('strong', $rev_score . '%' . $rev_rubric, ['style' => 'color:#1a73e8;']);
+                if (!empty($rev['model'])) {
+                    echo ' <span style="color:#aaa;font-size:11px;">(' . s($rev['model']) . ')</span>';
+                }
+                echo '</div>';
             }
-            $i = 1;
-            while ($i < count($parts)) {
-                $sec_name = $parts[$i] ?? '';
-                $sec_body = $parts[$i + 1] ?? '';
-                $emoji    = $found_sections[$sec_name] ?? $found_sections[ucfirst(strtolower($sec_name))] ?? '📌';
-                echo '<details style="margin-bottom:8px; border:1px solid #dee2e6; border-radius:6px; padding:0;">';
-                echo '<summary style="padding:10px 14px; cursor:pointer; font-weight:600; background:#f8f9fa; border-radius:6px; list-style:none; display:flex; align-items:center; gap:6px;">';
-                echo s($emoji . ' ' . $sec_name);
-                echo '</summary>';
-                echo '<div style="padding:12px 14px; font-size:0.9rem; line-height:1.6;">';
-                echo nl2br(s(trim($sec_body)));
-                echo '</div></details>';
-                $i += 2;
+            echo '</div></details>';
+        }
+
+        // ── Análisis textual (secciones expandibles) ──────────────────
+        // Extraer el texto de análisis (puede ser JSON o texto plano)
+        $text_analysis = $raw_analysis;
+        if (is_array($analysis_data) && isset($analysis_data['analysis'])) {
+            $text_analysis = $analysis_data['analysis'];
+        } elseif (is_array($analysis_data) && !isset($analysis_data['analysis'])) {
+            // Es JSON de rúbrica — ya se mostró arriba
+            $text_analysis = '';
+        }
+
+        if (!empty($text_analysis)) {
+            $sections_map = [
+                'Funcionalidad'    => '⚙️',
+                'Estilo'           => '🎨',
+                'Eficiencia'       => '⚡',
+                'Buenas prácticas' => '✅',
+                'Buenas Prácticas' => '✅',
+                'Complejidad'      => '📊',
+                'Corrección'       => '✔️',
+                'Procedimiento'    => '📐',
+                'Argumentación'    => '💬',
+            ];
+
+            $found_sections = [];
+            foreach ($sections_map as $section_name => $emoji) {
+                if (preg_match('/' . preg_quote($section_name, '/') . '\s*[:\*\n]/i', $text_analysis)) {
+                    $found_sections[$section_name] = $emoji;
+                }
             }
-            echo html_writer::end_div();
-        } else {
-            // Sin secciones detectadas: mostrar texto completo
-            echo html_writer::tag('div', nl2br(s($raw_analysis)),
-                ['class' => 'analysis-content']);
+
+            if (!empty($found_sections)) {
+                $pattern = '/(' . implode('|', array_map(fn($s) => preg_quote($s, '/'), array_keys($found_sections))) . ')\s*[:\*]?\s*/i';
+                $parts   = preg_split($pattern, $text_analysis, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+                echo html_writer::start_div('analysis-sections', ['style' => 'margin-top:10px;']);
+                if (!empty(trim($parts[0]))) {
+                    echo html_writer::tag('div', nl2br(s(trim($parts[0]))),
+                        ['style' => 'margin-bottom:8px;font-size:0.9rem;color:#555;']);
+                }
+                $i = 1;
+                while ($i < count($parts)) {
+                    $sec_name = $parts[$i] ?? '';
+                    $sec_body = $parts[$i + 1] ?? '';
+                    $emoji    = $found_sections[$sec_name] ?? '📌';
+                    echo '<details style="margin-bottom:8px;border:1px solid #dee2e6;border-radius:6px;">';
+                    echo '<summary style="padding:10px 14px;cursor:pointer;font-weight:600;background:#f8f9fa;border-radius:6px;">';
+                    echo s($emoji . ' ' . $sec_name);
+                    echo '</summary>';
+                    echo '<div style="padding:12px 14px;font-size:0.9rem;line-height:1.6;">';
+                    echo nl2br(s(trim($sec_body)));
+                    echo '</div></details>';
+                    $i += 2;
+                }
+                echo html_writer::end_div();
+            } else {
+                echo html_writer::tag('div', nl2br(s($text_analysis)),
+                    ['class' => 'analysis-content', 'style' => 'font-size:0.9rem;color:#555;margin-top:8px;']);
+            }
         }
     }
     
@@ -239,11 +291,18 @@ if ($cangrade && $submission->status == 'evaluated') {
     echo $OUTPUT->box_start('generalbox reevaluate');
     echo html_writer::tag('h4', get_string('reevaluate', 'aiassignment'));
     echo html_writer::tag('p', get_string('reevaluate_help', 'aiassignment'));
-    
-    $reevaluateurl = new moodle_url('/mod/aiassignment/reevaluate.php', 
-        array('id' => $submission->id, 'sesskey' => sesskey()));
-    echo html_writer::link($reevaluateurl, get_string('reevaluate', 'aiassignment'), 
-        array('class' => 'btn btn-warning'));
+
+    $reevaluateurl = new moodle_url('/mod/aiassignment/reevaluate.php',
+        ['id' => $submission->id, 'sesskey' => sesskey(), 'force' => 1]);
+    echo html_writer::link($reevaluateurl, '🔄 Re-evaluar con IA',
+        ['class' => 'btn btn-warning', 'style' => 'margin-right:8px;']);
+
+    // Botón re-evaluar con rúbrica si la tarea la tiene
+    if (!empty($aiassignment->use_rubric)) {
+        echo html_writer::tag('span',
+            '📋 Se usará la rúbrica personalizada de esta tarea',
+            ['style' => 'font-size:12px;color:#6c757d;margin-left:8px;']);
+    }
     echo $OUTPUT->box_end();
 }
 

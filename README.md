@@ -1,4 +1,4 @@
-# AI Assignment — Plugin para Moodle v2.2.0
+# AI Assignment — Plugin para Moodle v2.4.0
 
 Plugin de actividad para Moodle que evalúa automáticamente tareas de programación y detecta plagio de código fuente mediante inteligencia artificial.
 
@@ -10,6 +10,11 @@ Plugin de actividad para Moodle que evalúa automáticamente tareas de programac
 - **Ejecuta código** contra test cases reales con Judge0
 - **Detecta código generado por IA** (ChatGPT, Copilot)
 - **Analiza complejidad algorítmica** (O(n), O(n²), etc.)
+- **Acciones en lote** para re-evaluar, marcar/desmarcar plagio
+- **Versionado de submissions** con historial completo
+- **Auditoría** de todas las acciones del profesor
+- **Rate limiting** para proteger la cuota de OpenAI
+- **Tests PHPUnit** para clases core
 
 ## Instalación
 
@@ -52,9 +57,23 @@ demo-standalone/  Demo sin Moodle (Node.js)
 
 ## Versión
 
-**v2.2.0** — Abril 2026
+**v2.4.0** — Abril 2026
 
-Cambios principales desde v1.0:
+Cambios principales desde v2.3:
+- Refactorización del detector de plagio en 4 clases especializadas
+- Tests PHPUnit para security, ai_evaluator, plagiarism (lexical, structural, obfuscation)
+- Rate limiting para llamadas a OpenAI (configurable)
+- Análisis de plagio asíncrono via adhoc tasks
+- Versionado de submissions (historial completo)
+- Sistema de auditoría para acciones del profesor
+- Acciones en lote (re-evaluar, marcar/desmarcar plagio)
+- Filtros server-side en tabla de submissions (búsqueda + estado)
+- Tarea programada de limpieza de datos antiguos
+- Accesibilidad mejorada (aria-labels, roles, keyboard navigation)
+- Distancia de Levenshtein como métrica adicional en análisis léxico
+- Cadenas de idioma EN/ES para todas las nuevas funcionalidades
+
+Cambios desde v1.0:
 - Editor Monaco integrado
 - Evaluación asíncrona
 - Rúbricas personalizables
