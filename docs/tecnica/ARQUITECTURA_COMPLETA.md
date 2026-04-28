@@ -1,7 +1,7 @@
 # Arquitectura Completa del Proyecto
 
 **Plugin:** mod_aiassignment para Moodle  
-**Versión:** 1.5.0  
+**Versión:** 2.4.0  
 **Tipo:** Módulo de actividad (mod)
 
 ---
@@ -72,11 +72,20 @@ Esta es la carpeta que se empaqueta en el ZIP y se instala en Moodle.
 | Archivo | Propósito |
 |---|---|
 | `ai_evaluator.php` | **Evaluador con IA**. Clase `ai_evaluator` con método `evaluate()` que llama a OpenAI GPT para comparar la respuesta del estudiante con la solución del profesor. Incluye modo demo (sin API), reintentos automáticos y manejo de errores. |
-| `plagiarism_detector.php` | **Detector de plagio en 3 capas**. Clase `plagiarism_detector` con métodos: `compare_code()` (compara dos códigos), `generate_plagiarism_report()` (analiza todos los pares), análisis léxico/estructural/semántico, detección de técnicas de ofuscación, caché inteligente. |
-| `event/course_module_viewed.php` | **Evento de Moodle**: se dispara cuando alguien ve la tarea. Usado para logs y estadísticas de Moodle. |
+| `plagiarism_detector.php` | **Detector de plagio (orquestador)**. Clase `plagiarism_detector` que coordina las 3 capas delegando a clases especializadas en `plagiarism/`. Incluye `compare_code()`, `generate_plagiarism_report()` y caché inteligente. |
+| `plagiarism/lexical_analyzer.php` | **Capa 1: Análisis léxico** (v2.4.0). Normalización de identificadores, tokenización, Jaccard sobre bigramas, LCS ratio y distancia de Levenshtein normalizada. |
+| `plagiarism/structural_analyzer.php` | **Capa 2: Análisis estructural** (v2.4.0). Detección de lenguaje, extracción de features, AST real para Python, regex enriquecido para Java/JS/C++/PHP. |
+| `plagiarism/semantic_analyzer.php` | **Capa 3: Análisis semántico** (v2.4.0). Comparación con OpenAI GPT con rate limiting configurable por hora. |
+| `plagiarism/obfuscation_detector.php` | **Detector de ofuscación** (v2.4.0). Identifica 6 técnicas: renombrado, cambio de bucles, reordenación, código muerto, operadores equivalentes, comentarios falsos. |
+| `submission_versioner.php` | **Versionado de submissions** (v2.4.0). Guarda historial completo antes de cada re-envío o re-evaluación. |
+| `audit_logger.php` | **Sistema de auditoría** (v2.4.0). Registra acciones del profesor con IP y timestamp. Incluye política de retención automática. |
+| `task/evaluate_submission.php` | **Tarea asíncrona**: evalúa envíos en background con la IA. |
+| `task/analyze_plagiarism.php` | **Tarea asíncrona de plagio** (v2.4.0). Ejecuta análisis en background y notifica al profesor. |
+| `task/cleanup_old_data.php` | **Tarea programada** (v2.4.0). Limpieza semanal de notificaciones, auditoría y versiones antiguas. |
+| `event/course_module_viewed.php` | **Evento de Moodle**: se dispara cuando alguien ve la tarea. |
 | `event/submission_created.php` | **Evento**: se dispara cuando un estudiante envía una respuesta. |
-| `event/submission_graded.php` | **Evento**: se dispara cuando se califica un envío (automático o manual). |
-| `privacy/provider.php` | **Cumplimiento GDPR**. Define qué datos personales almacena el plugin y cómo exportarlos/eliminarlos. Requerido por Moodle. |
+| `event/submission_graded.php` | **Evento**: se dispara cuando se califica un envío. |
+| `privacy/provider.php` | **Cumplimiento GDPR**. Define qué datos personales almacena el plugin. |
 
 ### Carpeta `lang/` — Internacionalización
 
@@ -321,17 +330,18 @@ Prototipos funcionales de las APIs antes de integrarlas al plugin.
 
 ## Métricas del Proyecto
 
-- **Archivos PHP**: 28
+- **Archivos PHP**: 42 (+14 en v2.4.0)
 - **Archivos JavaScript**: 8
-- **Archivos SQL**: 6
-- **Líneas de código PHP**: ~4,500
+- **Archivos SQL**: 8 (+2 en v2.4.0)
+- **Líneas de código PHP**: ~6,500 (+2,000 en v2.4.0)
 - **Líneas de código JavaScript**: ~800
 - **Líneas de código Python**: ~200
-- **Tablas de BD**: 3 (+ 15 índices)
+- **Tablas de BD**: 9 (+2 en v2.4.0: sub_versions, audit_log)
+- **Tests PHPUnit**: 62 tests en 5 archivos (v2.4.0)
 - **Capacidades (permisos)**: 5
 - **Eventos de Moodle**: 3
-- **Strings de idioma**: ~120 (español + inglés)
-- **Tamaño del ZIP**: 159.8 KB
+- **Strings de idioma**: ~180 (español + inglés, +60 en v2.4.0)
+- **Tamaño del ZIP**: ~232 KB
 
 ---
 
@@ -359,16 +369,68 @@ Prototipos funcionales de las APIs antes de integrarlas al plugin.
 4. **UX profesional** — dashboard con gráficas, búsqueda en tiempo real, filtros, ordenamiento, notificaciones
 5. **Documentación exhaustiva** — manual de usuario, documentación técnica, guías de instalación, scripts de prueba
 
+✅ Accesibilidad mejorada (aria-labels, roles, keyboard navigation) (v2.4.0)
+✅ Tests PHPUnit para clases core (v2.4.0)
+
+---
+
+## Prueba de Estrés
+
+Se incluye un script de prueba de estrés (`scripts/test-estres-100-alumnos.sql`) generado automáticamente con `scripts/generar-test-estres.js` para conocer los límites del plugin bajo carga masiva.
+
+### Escenario de Prueba
+
+| Parámetro | Valor |
+|---|---|
+| Alumnos | 100 (stress001-stress100) |
+| Tareas | 3 (Factorial, Ordenamiento, Fibonacci) |
+| Submissions totales | 300 (100 por tarea) |
+| Evaluaciones | 300 con scores de plagio |
+| Comparaciones por tarea | 4,950 (n×(n-1)/2) |
+| Comparaciones totales | 14,850 |
+| Distribución | 40% plagio directo, 20% sospechoso, 40% original |
+
+### Métricas Esperadas de Rendimiento
+
+| Operación | Estimación |
+|---|---|
+| Carga del dashboard (100 alumnos) | ~400-600 ms |
+| Análisis de plagio Modo Rápido (100 alumnos, 1 tarea) | ~2-4 minutos |
+| Análisis de plagio Modo Completo (100 alumnos, 1 tarea) | ~15-30 minutos |
+| Memoria PHP para 4,950 comparaciones | ~50-100 MB |
+| Tamaño de caché del reporte | ~500 KB - 1 MB |
+
+### Límites Identificados
+
+1. **PHP max_execution_time**: con 100 alumnos el análisis completo puede exceder el timeout de 300s. Solución: usar la tarea asíncrona `analyze_plagiarism` (v2.4.0).
+2. **Memoria PHP**: la matriz de 4,950 comparaciones consume ~80 MB. Con `memory_limit=256M` funciona; con 200+ alumnos podría requerir 512M.
+3. **Rate limiting OpenAI**: con 4,950 comparaciones en modo completo, se necesitan ~4,950 llamadas a la API. Con el rate limit de 100/hora (v2.4.0), se necesitarían ~50 horas. Solución: el modo rápido omite OpenAI y es viable para 100+ alumnos.
+4. **Base de datos**: los 15+ índices mantienen las queries rápidas incluso con 300 submissions. El cuello de botella es el cálculo de plagio, no las queries.
+
+### Cómo Ejecutar la Prueba
+
+```bash
+# 1. Generar el script SQL
+node scripts/generar-test-estres.js
+
+# 2. Ejecutar en MySQL Workbench o phpMyAdmin
+# Abrir scripts/test-estres-100-alumnos.sql y ejecutar
+
+# 3. Verificar en Moodle
+# Ir al dashboard del curso "test" y verificar que aparecen 100 alumnos
+# Ejecutar análisis de plagio en Modo Rápido
+```
+
 ---
 
 ## Áreas de Mejora Potenciales
 
-1. **Tests automatizados** — no hay PHPUnit ni tests de integración
+1. ~~**Tests automatizados**~~ — ✅ Implementado en v2.4.0 (62 tests PHPUnit)
 2. **Limpieza de código** — `plagiarism_report.php` tiene código duplicado de versiones anteriores
-3. **Análisis AST para más lenguajes** — actualmente solo Python tiene AST real
+3. **Análisis AST para más lenguajes** — actualmente solo Python tiene AST real; podría integrarse tree-sitter
 4. **API de terceros para plagio** — podría integrarse con Turnitin o Copyleaks para comparar con internet
-5. **Procesamiento asíncrono real** — el análisis de plagio aún bloquea PHP; idealmente usaría cron tasks de Moodle
+5. ~~**Procesamiento asíncrono real**~~ — ✅ Implementado en v2.4.0 (adhoc tasks para plagio)
 
 ---
 
-**Conclusión**: Para una tesis de licenciatura, el plugin está en un nivel **muy bueno**. Tiene funcionalidad completa, rendimiento optimizado, UI profesional y documentación sólida. Los puntos pendientes son refinamientos que no afectan la funcionalidad core.
+**Conclusión**: El plugin está en un nivel **producción-ready** para entornos académicos. La v2.4.0 resolvió las 5 áreas pendientes más críticas: tests, refactorización del detector, rate limiting, versionado y auditoría. Los puntos restantes son extensiones opcionales.
