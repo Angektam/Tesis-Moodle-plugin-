@@ -404,4 +404,18 @@ echo \mod_aiassignment\realtime_notifier::render_polling_script($cm->id, $USER->
 // ── Rastreo de comportamiento en el editor ────────────────────
 echo \mod_aiassignment\behavior_tracker::get_tracking_script();
 
+// ── Enlace a encuesta SUS ─────────────────────────────────────
+$sus_url = new moodle_url('/mod/aiassignment/sus_survey.php', ['id' => $cm->id]);
+$sus_done = $DB->record_exists('aiassignment_sus_surveys', ['userid' => $USER->id, 'cmid' => $cm->id]);
+echo html_writer::start_div('', ['style' =>
+    'margin-top:24px;padding:12px 16px;background:#f8f9fa;border:1px solid #dee2e6;' .
+    'border-radius:8px;display:flex;align-items:center;justify-content:space-between;']);
+echo html_writer::tag('span',
+    $sus_done ? '✅ Ya completaste la encuesta de usabilidad.' : '📋 ¿Puedes ayudarnos? Completa la encuesta de usabilidad (5 min).',
+    ['style' => 'font-size:13px;color:#555;']);
+echo html_writer::link($sus_url,
+    $sus_done ? 'Ver mis respuestas' : 'Completar encuesta →',
+    ['class' => 'btn btn-sm ' . ($sus_done ? 'btn-outline-secondary' : 'btn-outline-primary')]);
+echo html_writer::end_div();
+
 echo $OUTPUT->footer();

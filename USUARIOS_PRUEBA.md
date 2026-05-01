@@ -8,7 +8,27 @@
 
 ---
 
-## 🎓 Estudiantes — todos usan contraseña `Test1234!`
+## 👨‍🏫 Maestro — contraseña `Test1234!`
+
+| Usuario   | Nombre                    | Email             |
+|-----------|---------------------------|-------------------|
+| `yobani`  | Yobani Martínez Ramírez   | yobani@test.com   |
+
+---
+
+## 🎓 Alumnos principales — contraseña `Test1234!`
+
+| Usuario     | Nombre                       | Email              |
+|-------------|------------------------------|--------------------|
+| `alumno01`  | Kevin Ricardo López Payán    | alumno01@test.com  |
+| `alumno02`  | Angel Gabriel Flores Guevara | alumno02@test.com  |
+| `alumno03`  | María García López           | alumno03@test.com  |
+| `alumno04`  | Carlos Hernández Torres      | alumno04@test.com  |
+| `alumno05`  | Sofía Ramírez Cruz           | alumno05@test.com  |
+
+---
+
+## 🎓 Estudiantes de prueba — todos usan contraseña `Test1234!`
 
 | Usuario       | Nombre                   |
 |---------------|--------------------------|
