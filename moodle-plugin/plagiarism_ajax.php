@@ -92,6 +92,11 @@ try {
     foreach ($report['detailed_comparisons'] as $cmp) {
         $u1 = $DB->get_record('user', ['id' => $cmp['submission1_user']], 'id,firstname,lastname');
         $u2 = $DB->get_record('user', ['id' => $cmp['submission2_user']], 'id,firstname,lastname');
+
+        // Obtener código de los envíos para comparación lado a lado
+        $sub1 = $DB->get_record('aiassignment_submissions', ['id' => $cmp['submission1_id']], 'answer');
+        $sub2 = $DB->get_record('aiassignment_submissions', ['id' => $cmp['submission2_id']], 'answer');
+
         $result['comparisons'][] = [
             'sub1_id'    => $cmp['submission1_id'],
             'sub2_id'    => $cmp['submission2_id'],
@@ -101,6 +106,8 @@ try {
             'verdict'    => $cmp['verdict'],
             'techniques' => $cmp['techniques'] ?? [],
             'analysis'   => $cmp['analysis'] ?? '',
+            'code1'      => $sub1 ? $sub1->answer : '',
+            'code2'      => $sub2 ? $sub2->answer : '',
             'layers'     => [
                 'lexical'    => round($cmp['layers']['lexical']['score'] ?? 0, 1),
                 'structural' => round($cmp['layers']['structural']['score'] ?? 0, 1),

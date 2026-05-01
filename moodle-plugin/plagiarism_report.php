@@ -331,16 +331,48 @@ function renderResults(data) {
             '<a href=\"/mod/aiassignment/mark_plagiarism.php?sid=' + cmp.sub1_id + '&status=false_positive&sesskey=' + _sesskey + '\" class=\"btn btn-sm btn-secondary\">❌ Falso positivo</a>' +
             '</div>';
 
-        // Bloque colapsable con links a envíos
-        html += '<div id=\"' + did + '\" style=\"display:none;margin-top:10px;\">' +
-            '<a href=\"/mod/aiassignment/submission.php?id=' + cmp.sub1_id + '\" class=\"btn btn-sm btn-primary\" target=\"_blank\">Ver envío de ' + cmp.user1 + '</a> ' +
-            '<a href=\"/mod/aiassignment/submission.php?id=' + cmp.sub2_id + '\" class=\"btn btn-sm btn-primary\" target=\"_blank\">Ver envío de ' + cmp.user2 + '</a>' +
-            '</div>';
+        // Bloque colapsable con código lado a lado
+        html += '<div id=\"' + did + '\" style=\"display:none;margin-top:12px;\">';
+
+        // Código lado a lado con resaltado de líneas similares
+        html += '<div style=\"display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;\">';
+
+        // Panel alumno 1
+        html += '<div>';
+        html += '<div style=\"background:#1a73e8;color:#fff;padding:6px 12px;border-radius:6px 6px 0 0;font-size:12px;font-weight:600;\">' +
+            '👤 ' + cmp.user1 + '</div>';
+        html += '<pre style=\"background:#f6f8fa;border:1px solid #dee2e6;border-top:none;border-radius:0 0 6px 6px;' +
+            'padding:12px;font-size:11px;max-height:350px;overflow-y:auto;margin:0;white-space:pre-wrap;word-break:break-all;\">' +
+            '<code class=\"language-python\" id=\"code1-' + idx + '\"></code></pre>';
+        html += '</div>';
+
+        // Panel alumno 2
+        html += '<div>';
+        html += '<div style=\"background:#dc3545;color:#fff;padding:6px 12px;border-radius:6px 6px 0 0;font-size:12px;font-weight:600;\">' +
+            '👤 ' + cmp.user2 + '</div>';
+        html += '<pre style=\"background:#f6f8fa;border:1px solid #dee2e6;border-top:none;border-radius:0 0 6px 6px;' +
+            'padding:12px;font-size:11px;max-height:350px;overflow-y:auto;margin:0;white-space:pre-wrap;word-break:break-all;\">' +
+            '<code class=\"language-python\" id=\"code2-' + idx + '\"></code></pre>';
+        html += '</div>';
+
+        html += '</div>'; // grid
+
+        // Botones ver envío completo
+        html += '<a href=\"/mod/aiassignment/submission.php?id=' + cmp.sub1_id + '\" class=\"btn btn-sm btn-primary\" target=\"_blank\">🔗 Envío completo de ' + cmp.user1 + '</a> ' +
+            '<a href=\"/mod/aiassignment/submission.php?id=' + cmp.sub2_id + '\" class=\"btn btn-sm btn-primary\" target=\"_blank\">🔗 Envío completo de ' + cmp.user2 + '</a>';
+
+        html += '</div>'; // did
 
         html += '</div>';
     });
 
     document.getElementById('results-area').innerHTML = html;
+
+    // Guardar comparaciones para acceso en toggleDetail
+    window._comparisons = {};
+    data.comparisons.forEach(function(cmp, idx) {
+        window._comparisons[idx] = cmp;
+    });
 }
 
 function toggleDetail(id, btn) {
@@ -348,8 +380,39 @@ function toggleDetail(id, btn) {
     if (!el) return;
     var hidden = el.style.display === 'none';
     el.style.display = hidden ? 'block' : 'none';
-    btn.textContent  = hidden ? 'Ocultar' : 'Ver código';
+    btn.textContent  = hidden ? 'Ocultar código' : 'Ver código';
+
+    // Cargar código real desde los datos si aún no se cargó
+    if (hidden) {
+        var idx = id.replace('cmp-', '');
+        var cmp = _comparisons[idx];
+        if (cmp) {
+            var c1 = document.getElementById('code1-' + idx);
+            var c2 = document.getElementById('code2-' + idx);
+            if (c1 && !c1.dataset.loaded) {
+                c1.textContent = cmp.code1 || '(código no disponible en caché — ver envío completo)';
+                c1.dataset.loaded = '1';
+                if (typeof hljs !== 'undefined') hljs.highlightElement(c1);
+            }
+            if (c2 && !c2.dataset.loaded) {
+                c2.textContent = cmp.code2 || '(código no disponible en caché — ver envío completo)';
+                c2.dataset.loaded = '1';
+                if (typeof hljs !== 'undefined') hljs.highlightElement(c2);
+            }
+        }
+    }
 }
+
+// Cargar highlight.js para el resaltado de código en el reporte
+(function() {
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
+    document.head.appendChild(link);
+    var script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js';
+    document.head.appendChild(script);
+})();
 </script>
 ";
 

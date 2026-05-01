@@ -114,10 +114,16 @@ if ($submission->status == 'evaluated' && $submission->score !== null) {
     echo html_writer::tag('h3', get_string('evaluation', 'aiassignment'));
     
     // Calificación
-    echo html_writer::tag('div', 
-        html_writer::tag('span', get_string('score', 'aiassignment') . ': ', array('class' => 'label')) .
-        html_writer::tag('span', round($submission->score, 2) . '%', array('class' => 'score-value')),
-        array('class' => 'score-display')
+    $score_color = $submission->score >= 80 ? '#28a745' : ($submission->score >= 60 ? '#ffc107' : '#dc3545');
+    $score_label = $submission->score >= 80 ? 'Excelente' : ($submission->score >= 60 ? 'Aprobado' : 'Necesita mejorar');
+
+    echo html_writer::tag('div',
+        html_writer::tag('span', get_string('score', 'aiassignment') . ': ', ['class' => 'label']) .
+        html_writer::tag('span', round($submission->score, 2) . '%',
+            ['class' => 'score-value', 'style' => "font-size:2rem;font-weight:700;color:$score_color;"]) .
+        html_writer::tag('span', " — $score_label",
+            ['style' => "color:$score_color;font-size:0.9rem;font-weight:600;"]),
+        ['class' => 'score-display', 'style' => 'margin-bottom:10px;']
     );
     
     // Barra de progreso
@@ -135,13 +141,78 @@ if ($submission->status == 'evaluated' && $submission->score !== null) {
     // Retroalimentación
     if ($submission->feedback) {
         echo html_writer::tag('h4', get_string('feedback', 'aiassignment'));
-        echo html_writer::tag('div', s($submission->feedback), array('class' => 'feedback-content'));
+
+        // ── Tarjetas de criterios (Mejora 3) ─────────────────────────
+        // Intentar parsear criterios del feedback para mostrar como tarjetas
+        $feedback_text = $submission->feedback;
+        $criteria_patterns = [
+            'Funcionalidad'    => ['icon' => '⚙️', 'color' => '#1a73e8'],
+            'Estilo'           => ['icon' => '🎨', 'color' => '#6f42c1'],
+            'Eficiencia'       => ['icon' => '⚡', 'color' => '#fd7e14'],
+            'Buenas prácticas' => ['icon' => '✅', 'color' => '#28a745'],
+            'Corrección'       => ['icon' => '✔️', 'color' => '#28a745'],
+            'Procedimiento'    => ['icon' => '📐', 'color' => '#17a2b8'],
+        ];
+
+        // Buscar porcentajes en el feedback (ej: "Funcionalidad: 85%")
+        $found_criteria = [];
+        foreach ($criteria_patterns as $name => $meta) {
+            if (preg_match('/' . preg_quote($name, '/') . '[^0-9]*(\d+(?:\.\d+)?)\s*%/i', $feedback_text, $m)) {
+                $found_criteria[$name] = ['score' => (float)$m[1], 'icon' => $meta['icon'], 'color' => $meta['color']];
+            }
+        }
+
+        if (!empty($found_criteria)) {
+            echo html_writer::start_div('', ['style' =>
+                'display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;']);
+            foreach ($found_criteria as $cname => $cdata) {
+                $ccolor = $cdata['score'] >= 80 ? $cdata['color'] : ($cdata['score'] >= 60 ? '#ffc107' : '#dc3545');
+                echo html_writer::start_div('', ['style' =>
+                    "background:#fff;border:2px solid $ccolor;border-radius:10px;padding:12px;text-align:center;"]);
+                echo html_writer::tag('div', $cdata['icon'],
+                    ['style' => 'font-size:1.5rem;margin-bottom:4px;']);
+                echo html_writer::tag('div', round($cdata['score'], 0) . '%',
+                    ['style' => "font-size:1.4rem;font-weight:700;color:$ccolor;"]);
+                echo html_writer::tag('div', $cname,
+                    ['style' => 'font-size:11px;color:#666;margin-top:2px;']);
+                echo html_writer::end_div();
+            }
+            echo html_writer::end_div();
+        }
+
+        echo html_writer::tag('div', s($submission->feedback), ['class' => 'feedback-content']);
     }
 
     // ── Análisis de complejidad (solo programación) ───────────
     if ($aiassignment->type === 'programming') {
         $complexity = \mod_aiassignment\complexity_analyzer::analyze($submission->answer);
         echo \mod_aiassignment\complexity_analyzer::render($complexity);
+    }
+
+    // ── Indicador de confianza visible para todos (Mejora 2) ──
+    $evaluation_conf = $DB->get_record('aiassignment_evaluations',
+        ['submission' => $submission->id], '*', IGNORE_MULTIPLE);
+    if ($evaluation_conf && $evaluation_conf->ai_analysis) {
+        $conf_data = json_decode($evaluation_conf->ai_analysis, true);
+        if (is_array($conf_data) && isset($conf_data['confidence'])) {
+            $conf = (int)$conf_data['confidence'];
+            $conf_color = $conf >= 80 ? '#28a745' : ($conf >= 60 ? '#ffc107' : '#dc3545');
+            $conf_label = $conf >= 80 ? 'Alta' : ($conf >= 60 ? 'Media' : 'Baja');
+            $conf_msg   = $conf >= 80
+                ? 'La IA evaluó tu código con alta certeza.'
+                : ($conf >= 60
+                    ? 'La IA tiene certeza media. El profesor puede revisar manualmente.'
+                    : 'La IA tiene baja certeza en esta evaluación. Se recomienda revisión manual.');
+            echo html_writer::start_div('', ['style' =>
+                "background:#f8f9fa;border:1px solid $conf_color;border-radius:8px;padding:10px 14px;" .
+                "margin-bottom:12px;display:flex;align-items:center;gap:10px;"]);
+            echo html_writer::tag('span',
+                "🎯 Confianza de la IA: <strong style='color:$conf_color;'>$conf_label ($conf%)</strong>",
+                ['style' => 'font-size:13px;']);
+            echo html_writer::tag('span', $conf_msg,
+                ['style' => 'font-size:12px;color:#666;']);
+            echo html_writer::end_div();
+        }
     }
 
     // ── Resultados de ejecución con Judge0 ────────────────────
