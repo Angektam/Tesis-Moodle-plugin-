@@ -150,8 +150,40 @@ if ($cansubmit && !$cangrade) {
         }
         
         if ($aiassignment->maxattempts > 0) {
-            echo '<p>' . get_string('attemptsremaining', 'aiassignment', 
-                $aiassignment->maxattempts - $attemptcount) . '</p>';
+            // ── Contador visual de intentos (Mejora 2) ───────────────
+            $remaining = $aiassignment->maxattempts - $attemptcount;
+            $pct_used  = round($attemptcount / $aiassignment->maxattempts * 100);
+            $bar_color = $remaining <= 1 ? '#dc3545' : ($remaining <= 2 ? '#ffc107' : '#28a745');
+
+            echo html_writer::start_div('', ['style' =>
+                'background:#f8f9fa;border:1px solid #dee2e6;border-radius:10px;padding:12px 16px;' .
+                'margin-bottom:14px;display:flex;align-items:center;gap:14px;']);
+
+            // Círculo de intentos
+            echo html_writer::start_div('', ['style' => 'text-align:center;flex-shrink:0;']);
+            echo html_writer::tag('div',
+                html_writer::tag('span', $attemptcount, ['style' => "font-size:1.4rem;font-weight:700;color:$bar_color;"]) .
+                html_writer::tag('span', '/' . $aiassignment->maxattempts, ['style' => 'font-size:0.9rem;color:#888;']),
+                ['style' => 'line-height:1;']);
+            echo html_writer::tag('div', 'intentos usados', ['style' => 'font-size:10px;color:#aaa;margin-top:2px;']);
+            echo html_writer::end_div();
+
+            // Barra + texto
+            echo html_writer::start_div('', ['style' => 'flex:1;']);
+            echo html_writer::tag('div',
+                "Intento <strong>$remaining</strong> restante" . ($remaining !== 1 ? 's' : ''),
+                ['style' => "font-size:13px;font-weight:600;color:$bar_color;margin-bottom:5px;"]);
+            echo html_writer::start_div('progress', ['style' => 'height:8px;margin:0;']);
+            echo html_writer::div('', 'progress-bar', [
+                'style'         => "width:{$pct_used}%;background:$bar_color;",
+                'aria-valuenow' => $pct_used, 'aria-valuemin' => '0', 'aria-valuemax' => '100',
+                'role'          => 'progressbar',
+                'aria-label'    => "$attemptcount de {$aiassignment->maxattempts} intentos usados",
+            ]);
+            echo html_writer::end_div();
+            echo html_writer::end_div();
+
+            echo html_writer::end_div();
         }
 
         // ── Modo examen: detectar cambio de pestaña ──────────────────
@@ -193,9 +225,22 @@ if ($cansubmit && !$cangrade) {
         echo '</div>';
 
         echo '<input type="submit" id="submit-btn" value="' . get_string('submit', 'aiassignment') . '" class="btn btn-primary">';
-        echo '<span id="eval-spinner" style="display:none; margin-left:12px; color:#555; font-size:14px;">
-    ⏳ Enviando... tu respuesta será evaluada en breve.
-</span>';
+        echo '
+<div id="eval-spinner" style="display:none;margin-top:16px;background:#e8f4fd;border:1px solid #bee3f8;
+     border-radius:10px;padding:16px 20px;text-align:center;">
+    <div style="display:inline-block;width:32px;height:32px;border:4px solid #bee3f8;
+                border-top-color:#1a73e8;border-radius:50%;animation:spin 0.8s linear infinite;
+                vertical-align:middle;margin-right:10px;"></div>
+    <span style="font-size:14px;font-weight:600;color:#1a73e8;vertical-align:middle;">
+        ⏳ Tu código está siendo evaluado por la IA...
+    </span>
+    <p style="margin:8px 0 0;font-size:12px;color:#555;">
+        Esto toma entre 2 y 5 segundos. Recibirás una notificación cuando esté listo.<br>
+        <strong>No cierres ni recargues esta página.</strong>
+    </p>
+</div>
+<style>@keyframes spin { to { transform:rotate(360deg); } }</style>
+';
         echo '</form>';
 
         // ── Script Monaco + modo examen ───────────────────────────────
@@ -293,6 +338,11 @@ if ($cansubmit && !$cangrade) {
     if ($submissions) {
         echo $OUTPUT->box_start('generalbox submissions');
         echo '<h3>' . get_string('yoursubmissions', 'aiassignment') . '</h3>';
+
+        // Enlace a mis estadísticas personales
+        $mystats_url = new moodle_url('/mod/aiassignment/my_stats.php', ['id' => $cm->id]);
+        echo html_writer::link($mystats_url, '📊 Ver mis estadísticas completas →',
+            ['style' => 'font-size:13px;color:#1a73e8;font-weight:600;display:block;margin-bottom:12px;']);
         
         // Gráfica de evolución de calificaciones (Mejora 6)
         $chart_attempts = [];

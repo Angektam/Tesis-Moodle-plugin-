@@ -454,3 +454,51 @@ Entorno controlado: Los casos de plagio fueron diseñados específicamente para 
 Evaluación de usabilidad limitada: La encuesta SUS se aplicó a 6 participantes (1 profesor + 5 alumnos). Una muestra más grande proporcionaría mayor validez estadística a los resultados de usabilidad.
 
 A pesar de estas limitaciones, los resultados obtenidos son suficientes para validar la viabilidad técnica del sistema y su aplicabilidad en entornos educativos reales.
+
+
+
+## ═══════════════════════════════════════════════════════════
+## NUEVA SECCIÓN 5 — Conclusiones y Trabajo Futuro
+## Pegar DESPUÉS de la sección 4 (Resultados) y ANTES de Bibliografía
+## Renumerar Bibliografía como sección 6
+## ═══════════════════════════════════════════════════════════
+
+5 Conclusiones y Trabajo Futuro
+
+5.1 Conclusiones
+
+El presente trabajo desarrolló un plugin prototipo para la plataforma Moodle que integra detección automática de plagio en código fuente mediante árboles abstractos e inteligencia artificial. A partir de los objetivos planteados y los resultados obtenidos, se presentan las siguientes conclusiones:
+
+En relación al primer objetivo específico, se analizaron los requisitos funcionales y no funcionales del sistema considerando las necesidades de los docentes y las características de la plataforma Moodle. El análisis resultó en la identificación de cinco capacidades principales (addinstance, view, submit, grade, viewgrades), tres actores del sistema (estudiante, docente, administrador) y nueve tablas de base de datos con más de veinte índices optimizados para las consultas más frecuentes.
+
+En relación al segundo objetivo específico, se diseñó la arquitectura del plugin siguiendo los estándares de desarrollo de Moodle para módulos de actividad. La arquitectura implementada sigue el patrón MVC con tres capas bien definidas: presentación (PHP + HTML + CSS + JavaScript), lógica de negocio (clases PHP especializadas) y datos (MySQL con ORM de Moodle). El sistema de detección de plagio se diseñó con tres capas de análisis independientes que pueden combinarse o ejecutarse por separado según las necesidades del profesor.
+
+En relación al tercer objetivo específico, se desarrolló el plugin prototipo implementando algoritmos de comparación de código fuente y generando reportes gráficos de porcentajes de similitud. El sistema implementado incluye análisis léxico mediante el coeficiente de Jaccard sobre bigramas de tokens y la distancia de Levenshtein normalizada, análisis estructural mediante árboles de sintaxis abstracta (AST) para código Python y análisis de patrones para otros lenguajes, y análisis semántico mediante el modelo de lenguaje GPT-4o-mini de OpenAI. Adicionalmente, el sistema detecta automáticamente seis técnicas de ofuscación comunes: renombrado de variables, cambio de tipo de bucle, reordenación de sentencias, inserción de código muerto, cambio de operadores equivalentes e inserción de comentarios falsos.
+
+En relación al cuarto objetivo específico, se evaluó el plugin prototipo en un entorno educativo aplicando pruebas con entregas de estudiantes para medir precisión y eficiencia. Los resultados del experimento controlado con 30 envíos distribuidos en cinco grupos de plagio conocidos demostraron una precisión del 100% (28 de 28 casos clasificados correctamente) y una tasa de falsos positivos del 0%. El tiempo de análisis en modo rápido fue de 18.4 segundos para 30 alumnos, lo que representa una reducción del flujo de trabajo de entre 3 y 5 veces comparado con herramientas externas como MOSS o JPlag. La encuesta de usabilidad SUS aplicada a 6 participantes obtuvo un score promedio de 82.5 sobre 100, clasificado como "Bueno" según la escala estándar.
+
+En síntesis, el plugin AI Assignment demuestra que es técnicamente viable integrar un sistema de detección de plagio en código fuente directamente en una plataforma de gestión del aprendizaje como Moodle, eliminando la necesidad de herramientas externas y mejorando significativamente la experiencia de uso tanto para profesores como para estudiantes. Las tres hipótesis planteadas fueron validadas con evidencia cuantitativa y cualitativa, superando en todos los casos los umbrales mínimos establecidos.
+
+5.2 Trabajo Futuro
+
+A partir de las limitaciones identificadas durante el desarrollo y la evaluación del sistema, se proponen las siguientes líneas de trabajo futuro para versiones posteriores del plugin:
+
+Análisis AST para múltiples lenguajes: La versión actual implementa análisis de árbol de sintaxis abstracta únicamente para código Python. Una extensión natural sería incorporar análisis AST real para Java, JavaScript y C/C++ mediante la integración de la biblioteca tree-sitter, que proporciona parsers de alta velocidad para más de 40 lenguajes de programación. Esto mejoraría la precisión de la capa estructural para los lenguajes más utilizados en cursos de programación universitaria.
+
+Comparación con fuentes externas: El sistema actual compara únicamente los envíos entre los estudiantes del mismo curso. Una versión futura podría integrar comparación con repositorios públicos de código como GitHub mediante su API de búsqueda, permitiendo detectar código copiado de internet. Esta funcionalidad requeriría consideraciones adicionales de privacidad y rendimiento dado el volumen de datos involucrado.
+
+Validación con muestra más amplia: El experimento de validación se realizó con 30 envíos en un entorno controlado. Para obtener mayor validez estadística y generalización de los resultados, sería necesario aplicar el sistema en un curso real con al menos 100 estudiantes durante un semestre completo, documentando los casos de plagio detectados y validados por el profesor.
+
+Modelo de IA propio: La versión actual depende de la API de OpenAI para la capa semántica, lo que implica costos por uso y dependencia de un servicio externo. Una línea de investigación futura sería entrenar un modelo de lenguaje propio especializado en detección de plagio de código fuente, utilizando los datos generados por el sistema como conjunto de entrenamiento. Esto eliminaría la dependencia externa y reduciría los costos operativos.
+
+Integración con el estándar LTI: Para facilitar la adopción del plugin en instituciones que utilizan otras plataformas de gestión del aprendizaje distintas a Moodle, se podría implementar el estándar Learning Tools Interoperability (LTI), que permite integrar herramientas educativas externas con cualquier LMS compatible.
+
+Análisis de tendencias históricas: El sistema actual analiza cada tarea de forma independiente. Una extensión valiosa sería implementar análisis de tendencias a lo largo del tiempo, permitiendo al profesor identificar si un estudiante mejora progresivamente o si sus patrones de código sugieren dependencia de soluciones externas a lo largo del semestre.
+
+5.3 Reflexión Final
+
+El desarrollo de este proyecto permitió demostrar que la integración de inteligencia artificial en plataformas educativas existentes no requiere reemplazar la infraestructura actual, sino complementarla con herramientas especializadas que aprovechen los datos y flujos de trabajo ya establecidos. El plugin AI Assignment representa un paso concreto hacia la automatización de procesos académicos que actualmente consumen tiempo significativo de los docentes, permitiéndoles enfocarse en la retroalimentación pedagógica en lugar de en la detección manual de irregularidades.
+
+La combinación de análisis léxico, estructural y semántico demostró ser más robusta que cualquiera de las tres capas por separado, validando el enfoque multicapa propuesto. La detección automática de técnicas de ofuscación, en particular, representa una contribución técnica que va más allá de los sistemas de detección de plagio convencionales basados únicamente en similitud textual.
+
+Finalmente, el hecho de que el sistema haya obtenido un score SUS de 82.5 con usuarios reales confirma que la usabilidad no fue sacrificada en favor de la complejidad técnica, lo cual es un requisito fundamental para que cualquier herramienta educativa sea adoptada en la práctica.
