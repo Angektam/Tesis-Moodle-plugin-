@@ -77,22 +77,28 @@ try {
     const parentDir = path.join(__dirname, '..');
     process.chdir(parentDir);
     
-    console.log('🔨 Creando archivo ZIP con PowerShell...\n');
+    console.log('🔨 Creando archivo ZIP con PowerShell (estructura aiassignment/)...\n');
     
-    // Crear ZIP usando PowerShell con sintaxis correcta
+    // Moodle requiere que el ZIP contenga una carpeta llamada "aiassignment" adentro
     const psCommand = `
-        $source = "moodle-plugin"
+        $source      = "moodle-plugin"
         $destination = "${zipPath.replace(/\\/g, '\\\\')}"
+        $tempDir     = "${zipPath.replace(/\\/g, '\\\\').replace('mod_aiassignment.zip', 'aiassignment')}"
         
-        # Eliminar ZIP si existe
-        if (Test-Path $destination) {
-            Remove-Item $destination -Force
-        }
+        # Eliminar ZIP y carpeta temporal si existen
+        if (Test-Path $destination) { Remove-Item $destination -Force }
+        if (Test-Path $tempDir)     { Remove-Item $tempDir -Recurse -Force }
         
-        # Crear ZIP de toda la carpeta
-        Compress-Archive -Path $source -DestinationPath $destination -Force
+        # Copiar moodle-plugin a dist/aiassignment (nombre requerido por Moodle)
+        Copy-Item -Path $source -Destination $tempDir -Recurse -Force
         
-        Write-Host "✅ ZIP creado exitosamente"
+        # Crear ZIP con la carpeta aiassignment adentro
+        Compress-Archive -Path $tempDir -DestinationPath $destination -Force
+        
+        # Limpiar carpeta temporal
+        Remove-Item $tempDir -Recurse -Force
+        
+        Write-Host "ZIP creado con estructura aiassignment/ correcta"
     `;
     
     execSync(`powershell -Command "${psCommand}"`, { stdio: 'inherit' });
