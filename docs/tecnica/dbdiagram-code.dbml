@@ -1,56 +1,116 @@
+// ============================================================
+// Diagrama ER — AI Assignment Plugin v2.5.0
 // Pega este código en https://dbdiagram.io/d
-// Diagrama BD - aiassignment plugin (Unified)
+// para generar el diagrama visual completo
+// ============================================================
+
+// ── Tablas de Moodle (referenciadas, no propias del plugin) ──
 
 Table mdl_user {
-  id int [pk, increment]
-  email varchar(191)
-  password varchar(255)
+  id int [pk, increment, note: 'ID del usuario']
+  username varchar(100)
   firstname varchar(255)
   lastname varchar(255)
+  email varchar(191)
+  password varchar(255)
 }
 
 Table mdl_course {
-  id int [pk, increment]
+  id int [pk, increment, note: 'ID del curso']
   fullname varchar(255)
-  shortname varchar(255)
+  shortname varchar(100)
 }
+
+// ── Tablas propias del plugin ─────────────────────────────────
 
 Table mdl_aiassignment {
   id int [pk, increment]
-  course int [ref: > mdl_course.id]
-  teacher_id int [ref: > mdl_user.id]
-  name varchar(255)
-  intro longtext
-  description longtext
-  type varchar(20)
-  solution longtext
-  documentation longtext
-  test_cases longtext
-  grade int
-  maxattempts int
+  course int [ref: > mdl_course.id, note: 'FK → curso']
+  teacher_id int [ref: > mdl_user.id, note: 'FK → profesor']
+  name varchar(255) [note: 'Nombre de la tarea']
+  type varchar(20) [note: 'math | programming | essay | sql']
+  solution longtext [note: 'Solución de referencia (privada)']
+  grade int [note: 'Calificación máxima']
+  maxattempts int [note: '0 = ilimitado']
+  use_rubric tinyint [note: '1 = usa rúbrica personalizada']
+  exam_mode_local tinyint [note: '1 = modo examen activo']
+  rubric_funcionalidad int [note: 'Peso % funcionalidad']
+  rubric_estilo int [note: 'Peso % estilo']
+  rubric_eficiencia int [note: 'Peso % eficiencia']
+  rubric_documentacion int [note: 'Peso % documentación']
   timecreated int
   timemodified int
 }
 
 Table mdl_aiassignment_submissions {
   id int [pk, increment]
-  assignment int [ref: > mdl_aiassignment.id]
-  userid int [ref: > mdl_user.id]
-  answer longtext
-  status varchar(20)
-  score decimal
-  feedback longtext
-  attempt int
-  evaluated_at int
+  assignment int [ref: > mdl_aiassignment.id, note: 'FK → tarea']
+  userid int [ref: > mdl_user.id, note: 'FK → alumno']
+  answer longtext [note: 'Código fuente enviado']
+  status varchar(20) [note: 'pending | evaluated | flagged']
+  score decimal [note: 'Calificación 0-100']
+  feedback longtext [note: 'Retroalimentación de la IA']
+  attempt int [note: 'Número de intento']
+  evaluated_at int [note: 'Timestamp de evaluación']
   timecreated int
   timemodified int
 }
 
 Table mdl_aiassignment_evaluations {
   id int [pk, increment]
-  submission int [ref: > mdl_aiassignment_submissions.id]
-  similarity_score decimal
-  ai_feedback longtext
-  ai_analysis longtext
+  submission int [ref: > mdl_aiassignment_submissions.id, note: 'FK → envío']
+  similarity_score decimal [note: 'Score de plagio 0-100']
+  ai_feedback longtext [note: 'Feedback legible de la IA']
+  ai_analysis longtext [note: 'JSON con análisis detallado']
+  timecreated int
+}
+
+Table mdl_aiassignment_notifications {
+  id int [pk, increment]
+  userid int [ref: > mdl_user.id, note: 'FK → destinatario']
+  type varchar(50) [note: 'evaluated | plagiarism_alert | resubmit']
+  payload text [note: 'JSON con título, cuerpo y URL']
+  seen tinyint [note: '0 = no vista, 1 = vista']
+  timecreated int
+}
+
+Table mdl_aiassignment_sub_versions {
+  id int [pk, increment]
+  submission_id int [ref: > mdl_aiassignment_submissions.id, note: 'FK → envío original']
+  userid int [ref: > mdl_user.id]
+  answer longtext [note: 'Código de la versión anterior']
+  score decimal [note: 'Calificación anterior']
+  status varchar(20)
+  attempt int
+  reason varchar(50) [note: 'resubmit | reevaluate | manual_grade']
+  timecreated int
+}
+
+Table mdl_aiassignment_audit_log {
+  id int [pk, increment]
+  action varchar(50) [note: 'manual_grade | plagiarism_confirm | reevaluate']
+  userid int [ref: > mdl_user.id, note: 'FK → profesor que actuó']
+  targetid int [note: 'ID del objeto afectado']
+  targettype varchar(30) [note: 'submission | assignment']
+  ip varchar(45) [note: 'IP del profesor']
+  data text [note: 'JSON con detalles del cambio']
+  timecreated int
+}
+
+Table mdl_aiassignment_sus_surveys {
+  id int [pk, increment]
+  userid int [ref: > mdl_user.id, note: 'FK → participante']
+  cmid int [note: 'ID del course module']
+  responses text [note: 'JSON con respuestas q1-q10']
+  sus_score decimal [note: 'Score SUS calculado 0-100']
+  timecreated int
+}
+
+Table mdl_aiassignment_peer_reviews {
+  id int [pk, increment]
+  reviewer_id int [ref: > mdl_user.id, note: 'FK → revisor']
+  submission_id int [ref: > mdl_aiassignment_submissions.id, note: 'FK → envío revisado']
+  score decimal [note: 'Calificación del par 0-100']
+  feedback longtext
   timecreated int
 }
