@@ -194,6 +194,14 @@ function startAnalysis(nosem) {
 function renderResults(data) {
     var html = '';
 
+    // ── Validación defensiva de datos ────────────────────────────────────
+    data.user_ranking  = data.user_ranking  || [];
+    data.comparisons   = data.comparisons   || [];
+    data.total_submissions  = data.total_submissions  || 0;
+    data.total_comparisons  = data.total_comparisons  || 0;
+    data.suspicious_pairs   = data.suspicious_pairs   || 0;
+    data.highest_similarity = data.highest_similarity || 0;
+
     // Indicador de modo
     var modeLabel = data.mode === 'fast' ? '⚡ Modo Rápido (sin IA)' : '🧠 Modo Completo (con IA)';
     html += '<div style=\"background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;\">' +
@@ -308,7 +316,8 @@ function renderResults(data) {
         html += '<div style=\"display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;font-size:12px;\">';
         [{k:'lexical',l:'🔤 Léxica'},{k:'structural',l:'🏗️ Estructural'},{k:'semantic',l:'🧠 Semántica'}]
         .forEach(function(ly) {
-            var ls = cmp.layers[ly.k];
+            var layers = cmp.layers || {};
+            var ls = layers[ly.k] !== undefined ? layers[ly.k] : 0;
             var lc = ls >= 70 ? '#dc3545' : (ls >= 40 ? '#856404' : '#155724');
             html += '<span style=\"background:#f8f9fa;border:1px solid #dee2e6;border-radius:4px;padding:3px 8px;\">' +
                 ly.l + ': <strong style=\"color:' + lc + ';\">' + ls + '%</strong></span>';
