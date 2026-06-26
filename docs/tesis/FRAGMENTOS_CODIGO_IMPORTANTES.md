@@ -1,44 +1,160 @@
-# Fragmentos de Código Más Importantes del Proyecto
-# AI Assignment Plugin — Tesis de Licenciatura
-# Universidad Autónoma de Sinaloa — Facultad de Ingeniería Mochis
-# López Payán Kevin Ricardo · Flores Guevara Angel Gabriel
+# Fragmentos de Código Más Importantes — Tesis AI Assignment
+**Plugin:** `mod_aiassignment` para Moodle  
+**Versión:** 2.4.0 | **Fecha:** Junio 2026
 
 ---
 
 ## Índice
 
-1. [El corazón del sistema — compare_code()](#1-el-corazón-del-sistema--compare_code)
-2. [Normalización de identificadores](#2-normalización-de-identificadores)
-3. [Análisis AST con Python](#3-análisis-ast-con-python)
-4. [Evaluación con OpenAI GPT](#4-evaluación-con-openai-gpt)
-5. [Detección de técnicas de ofuscación](#5-detección-de-técnicas-de-ofuscación)
-6. [Fórmula del score final](#6-fórmula-del-score-final)
-7. [Caché inteligente del reporte de plagio](#7-caché-inteligente-del-reporte-de-plagio)
-8. [Integración con Moodle — query consolidada](#8-integración-con-moodle--query-consolidada)
+1. [AST Analyzer — Comparación estructural de código (Python)](#1-ast-analyzer)
+2. [Plagiarism Detector — Motor de 3 capas (PHP)](#2-plagiarism-detector)
+3. [AI Evaluator — Evaluación con OpenAI (PHP)](#3-ai-evaluator)
+4. [Code Executor — Ejecución real con Judge0 (PHP)](#4-code-executor)
+5. [Submit — Pipeline completo de envío (PHP)](#5-submit)
+6. [Lib — Estadísticas consolidadas (PHP)](#6-lib)
+7. [Generador de datos de prueba (JavaScript)](#7-generador-de-prueba)
+8. [Audit Logger — Trazabilidad (PHP)](#8-audit-logger)
 
 ---
 
-## 1. El corazón del sistema — `compare_code()`
+## 1. AST Analyzer
 
-**Archivo:** `moodle-plugin/classes/plagiarism_detector.php`
+**Archivo:** `moodle-plugin/ast_analyzer.py`  
+**Rol:** Parsea código Python con el módulo `ast` nativo y compara dos soluciones en 3 capas ponderadas.
 
-**Qué hace:** Orquesta las 3 capas de análisis y calcula el score final de similitud entre dos fragmentos de código.
+### 1.1 Extracción de características del árbol AST
 
-**Por qué es importante:** Es el método central de toda la detección. La decisión de omitir OpenAI cuando el promedio léxico+estructural ya es >85% o <20% reduce el costo de la API hasta en un 60% sin perder precisión, porque en esos casos el resultado ya es obvio.
+```python
+def extract_features(code: str) -> dict:
+    """Parsea código Python con ast.parse() y extrae características del árbol."""
+    tree = ast.parse(code)
+    node_types = Counter()
+    structure  = []
+    metrics    = {
+        "functions": 0, "loops": 0, "conditionals": 0,
+        "returns": 0,   "assignments": 0, "imports": 0,
+        "recursion": 0, "max_depth": 0,
+    }
+    func_names = set()
+
+    def walk(node, depth=0):
+        metrics["max_depth"] = max(metrics["max_depth"], depth)
+        t = type(node).__name__
+        node_types[t] += 1
+        structure.append(t)
+
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            metrics["functions"] += 1
+            func_names.add(node.name)
+        elif isinstance(node, (ast.For, ast.While, ast.AsyncFor)):
+            metrics["loops"] += 1
+        elif isinstance(node, ast.If):
+            metrics["conditionals"] += 1
+        elif isinstance(node, ast.Return):
+            metrics["returns"] += 1
+        elif isinstance(node, (ast.Assign, ast.AugAssign, ast.AnnAssign)):
+            metrics["assignments"] += 1
+        elif isinstance(node, (ast.Import, ast.ImportFrom)):
+            metrics["imports"] += 1
+
+        for child in ast.iter_child_nodes(node):
+            walk(child, depth + 1)
+
+    walk(tree)
+
+    # Detectar recursión: función que se llama a sí misma
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name) and node.func.id in func_names:
+                metrics["recursion"] += 1
+
+    return {"node_types": dict(node_types), "structure": structure,
+            "metrics": metrics, "total_nodes": sum(node_types.values())}
+```
+
+### 1.2 Puntuación final ponderada (3 capas)
+
+```python
+def compare(code1: str, code2: str) -> dict:
+    f1 = extract_features(code1)
+    f2 = extract_features(code2)
+
+    # Capa 1: similitud de tipos de nodos (coseno) — 35%
+    node_sim = cosine(f1["node_types"], f2["node_types"]) * 100
+
+    # Capa 2: similitud de secuencia estructural con bigramas Jaccard — 35%
+    bg1 = [f"{f1['structure'][i]}|{f1['structure'][i+1]}"
+           for i in range(len(f1["structure"]) - 1)]
+    bg2 = [f"{f2['structure'][i]}|{f2['structure'][i+1]}"
+           for i in range(len(f2["structure"]) - 1)]
+    struct_sim = jaccard(bg1, bg2) * 100
+
+    # Capa 3: similitud de métricas numéricas — 30%
+    met_sim = metrics_sim(f1["metrics"], f2["metrics"]) * 100
+
+    final = round(node_sim * 0.35 + struct_sim * 0.35 + met_sim * 0.30, 2)
+
+    # Detección de técnicas de ofuscación
+    techniques = []
+    if node_sim > 70 and struct_sim > 65:
+        techniques.append("Renombrado de variables/funciones")
+    if abs(f1["metrics"]["loops"] - f2["metrics"]["loops"]) >= 1 and met_sim > 60:
+        techniques.append("Cambio de tipo de bucle (for/while/recursión)")
+    r1 = f1["metrics"]["recursion"] > 0
+    r2 = f2["metrics"]["recursion"] > 0
+    if r1 != r2 and met_sim > 55:
+        techniques.append("Cambio recursión ↔ iteración")
+
+    return {
+        "similarity": final,
+        "method": "ast_python",
+        "details": {
+            "node_types_sim": round(node_sim, 2),
+            "structure_sim":  round(struct_sim, 2),
+            "metrics_sim":    round(met_sim, 2),
+            "techniques":     techniques,
+        }
+    }
+```
+
+### 1.3 Funciones de similitud (Coseno y Jaccard)
+
+```python
+def jaccard(a: list, b: list) -> float:
+    """Similitud de Jaccard entre dos listas."""
+    if not a and not b: return 1.0
+    ca, cb = Counter(a), Counter(b)
+    inter = sum((ca & cb).values())
+    union = sum((ca | cb).values())
+    return inter / union if union else 0.0
+
+def cosine(v1: dict, v2: dict) -> float:
+    """Similitud coseno entre dos vectores de conteo."""
+    keys = set(v1) | set(v2)
+    dot  = sum(v1.get(k, 0) * v2.get(k, 0) for k in keys)
+    n1   = math.sqrt(sum(x**2 for x in v1.values()))
+    n2   = math.sqrt(sum(x**2 for x in v2.values()))
+    return dot / (n1 * n2) if n1 and n2 else 0.0
+```
+
+---
+
+## 2. Plagiarism Detector
+
+**Archivo:** `moodle-plugin/classes/plagiarism_detector.php`  
+**Rol:** Compara envíos de código en 3 capas (léxica, estructural, semántica con IA) y genera reporte masivo.
+
+### 2.1 Comparación en 3 capas con pesos
 
 ```php
-public static function compare_code(string $code1, string $code2, bool $nosem = false): array
-{
-    // ── CAPA 1: Análisis Léxico (peso 35%) ───────────────────────────────
-    // Compara tokens normalizados resistentes al renombrado de variables
+public static function compare_code(string $code1, string $code2, bool $nosem = false): array {
+    // Capa 1: Léxica — tokens normalizados, resistente a renombrado
     $lex = self::lexical_similarity($code1, $code2);
 
-    // ── CAPA 2: Análisis Estructural (peso 30%) ───────────────────────────
-    // AST real para Python, regex enriquecido para otros lenguajes
+    // Capa 2: Estructural — AST real para Python, regex para otros lenguajes
     $struct = self::structural_similarity($code1, $code2);
 
-    // ── CAPA 3: Análisis Semántico con IA (peso 35%) ──────────────────────
-    // Se omite si el resultado ya es obvio (>85% o <20%) para ahorrar API calls
+    // Capa 3: Semántica (IA) — solo cuando el resultado es ambiguo (20–85%)
     $lex_struct_avg = ($lex['score'] + $struct['score']) / 2;
     $skip_sem = $nosem || $lex_struct_avg > 85 || $lex_struct_avg < 20;
 
@@ -47,477 +163,666 @@ public static function compare_code(string $code1, string $code2, bool $nosem = 
         $final = round($lex['score'] * 0.55 + $struct['score'] * 0.45, 2);
         $sem   = ['score' => 0, 'analysis' => 'Omitido (resultado obvio)'];
     } else {
-        // Con IA: llamar a OpenAI para análisis semántico
         $sem   = self::semantic_similarity_ai($code1, $code2);
         $final = round(
-            $lex['score']    * 0.35 +   // peso léxico
-            $struct['score'] * 0.30 +   // peso estructural
-            $sem['score']    * 0.35,    // peso semántico
+            $lex['score']    * 0.35 +   // WEIGHT_LEXICAL
+            $struct['score'] * 0.30 +   // WEIGHT_STRUCTURAL
+            $sem['score']    * 0.35,    // WEIGHT_SEMANTIC
             2
         );
     }
 
-    // ── Detectar técnicas de ofuscación y ajustar score ───────────────────
-    // Cada técnica detectada suma +5 puntos al score final (máx 100)
     $techniques = self::detect_obfuscation_techniques($code1, $code2, $lex, $struct);
     $verdict    = self::get_verdict($final, $techniques);
 
     return [
         'final_score'         => $final,
-        'verdict'             => $verdict,          // 'plagio' | 'sospechoso' | 'original'
+        'verdict'             => $verdict,
         'layers'              => ['lexical' => $lex, 'structural' => $struct, 'semantic' => $sem],
         'techniques_detected' => $techniques,
-        'analysis'            => $sem['analysis'] ?? '',
     ];
 }
 ```
 
----
-
-## 2. Normalización de identificadores
-
-**Archivo:** `moodle-plugin/classes/plagiarism/lexical_analyzer.php`
-
-**Qué hace:** Reemplaza nombres de variables, funciones y strings por tokens genéricos antes de comparar. Esto hace que `factorial(n)` y `calc_fact(num)` sean idénticos después de normalizar.
-
-**Por qué es importante:** Sin este paso, el coeficiente de Jaccard daría bajo para código con renombrado de variables y el plagio pasaría desapercibido. Es la base de la resistencia al renombrado.
+### 2.2 Normalización léxica (resistente a renombrado de variables)
 
 ```php
-public static function normalize_identifiers(string $code): string
-{
-    // 1. Eliminar comentarios (no aportan lógica)
-    $code = preg_replace('/\/\*[\s\S]*?\*\//', '', $code);  // /* comentario */
-    $code = preg_replace('/\/\/[^\n]*/', '', $code);         // // comentario
-    $code = preg_replace('/#[^\n]*/', '', $code);            // # comentario Python
+private static function normalize_identifiers(string $code): string {
+    // Eliminar comentarios de todo tipo
+    $code = preg_replace('/\/\*[\s\S]*?\*\//', '', $code);
+    $code = preg_replace('/\/\/[^\n]*/', '', $code);
+    $code = preg_replace('/#[^\n]*/', '', $code);
 
-    // 2. Normalizar strings literales → "STR"
-    // "Hola mundo" y "Hello world" se vuelven idénticos
+    // Normalizar strings literales y números
     $code = preg_replace('/"[^"]*"/', '"STR"', $code);
     $code = preg_replace("/'[^']*'/", "'STR'", $code);
-
-    // 3. Normalizar números → NUM
-    // 42, 3.14, 100 se vuelven todos "NUM"
     $code = preg_replace('/\b\d+(\.\d+)?\b/', 'NUM', $code);
 
-    // 4. Normalizar espacios en blanco
-    $code = preg_replace('/\s+/', ' ', trim($code));
+    return preg_replace('/\s+/', ' ', trim($code));
+}
 
-    return $code;
+private static function lcs_ratio(array $a, array $b): float {
+    $la = count($a); $lb = count($b);
+    if ($la === 0 && $lb === 0) return 1.0;
+    // Para arrays grandes, usar Jaccard como aproximación (evita timeout O(n²))
+    if ($la > 300 || $lb > 300) return self::jaccard($a, $b);
+
+    $dp = array_fill(0, $la + 1, array_fill(0, $lb + 1, 0));
+    for ($i = 1; $i <= $la; $i++) {
+        for ($j = 1; $j <= $lb; $j++) {
+            $dp[$i][$j] = ($a[$i-1] === $b[$j-1])
+                ? $dp[$i-1][$j-1] + 1
+                : max($dp[$i-1][$j], $dp[$i][$j-1]);
+        }
+    }
+    return $dp[$la][$lb] / max($la, $lb);
 }
 ```
 
-**Ejemplo de transformación:**
-```
-ANTES:  def factorial(n):
-            if n == 0 or n == 1:
-                return 1
-            return n * factorial(n - 1)
+### 2.3 Llamada al microservicio Python AST
 
-DESPUÉS: def factorial(NUM): if NUM == NUM or NUM == NUM: return NUM return NUM * factorial(NUM - NUM)
-
-PLAGIO: def calc_fact(num):
-            if num == 0 or num == 1:
-                return 1
-            return num * calc_fact(num - 1)
-
-DESPUÉS: def calc_fact(NUM): if NUM == NUM or NUM == NUM: return NUM return NUM * calc_fact(NUM - NUM)
-```
-→ Ambos normalizados son casi idénticos → Jaccard alto → Plagio detectado ✅
-
----
-
-## 3. Análisis AST con Python
-
-**Archivo:** `moodle-plugin/ast_analyzer.py`
-
-**Qué hace:** Recibe dos fragmentos de código Python, los parsea con `ast.parse()` para construir el árbol de sintaxis abstracta real, extrae métricas estructurales y calcula similitud.
-
-**Por qué es importante:** Es el único análisis estructural real del proyecto. A diferencia del análisis con regex, el AST detecta que `for i in range(n)` y `while n > 0: n -= 1` tienen la misma estructura lógica aunque el texto sea completamente diferente.
-
-```python
-import ast
-import json
-import sys
-import base64
-
-def extract_features(code: str) -> dict:
-    """Extrae métricas estructurales del AST de código Python."""
-    try:
-        tree = ast.parse(code)
-    except SyntaxError:
-        return {'functions': 0, 'loops': 0, 'conditionals': 0, 'returns': 0, 'depth': 0}
-
-    features = {
-        # Contar nodos del AST por tipo
-        'functions':    sum(1 for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)),
-        'loops':        sum(1 for n in ast.walk(tree) if isinstance(n, (ast.For, ast.While))),
-        'conditionals': sum(1 for n in ast.walk(tree) if isinstance(n, ast.If)),
-        'returns':      sum(1 for n in ast.walk(tree) if isinstance(n, ast.Return)),
-        'calls':        sum(1 for n in ast.walk(tree) if isinstance(n, ast.Call)),
-        'depth':        max_nesting_depth(tree),
-    }
-    return features
-
-def max_nesting_depth(tree) -> int:
-    """Calcula la profundidad máxima de anidamiento del AST."""
-    def depth(node, current=0):
-        if not isinstance(node, ast.AST):
-            return current
-        children = list(ast.iter_child_nodes(node))
-        if not children:
-            return current
-        return max(depth(child, current + 1) for child in children)
-    return depth(tree)
-
-def similarity(f1: dict, f2: dict) -> float:
-    """Calcula similitud entre dos conjuntos de features (0-100)."""
-    scores = []
-    for key in ['functions', 'loops', 'conditionals', 'returns', 'depth']:
-        v1, v2 = f1.get(key, 0), f2.get(key, 0)
-        mx = max(v1, v2)
-        # Si ambos son 0, son iguales en ese aspecto
-        scores.append(1 - abs(v1 - v2) / mx if mx > 0 else 1.0)
-    return round(sum(scores) / len(scores) * 100, 2)
-
-# Recibir payload en base64 para evitar problemas con comillas en la línea de comandos
-payload = json.loads(base64.b64decode(sys.argv[1]))
-f1 = extract_features(payload['code1'])
-f2 = extract_features(payload['code2'])
-
-print(json.dumps({
-    'similarity': similarity(f1, f2),
-    'details': {'features1': f1, 'features2': f2}
-}))
-```
-
-**Cómo se invoca desde PHP:**
 ```php
-// PHP ejecuta Python como proceso hijo con timeout de 10 segundos
-$payload = base64_encode(json_encode(['code1' => $c1, 'code2' => $c2]));
-$cmd     = 'python3 ast_analyzer.py ' . escapeshellarg($payload);
-$output  = shell_exec($cmd);
-$result  = json_decode($output, true); // {'similarity': 87.5, 'details': {...}}
+private static function call_python_ast_service(string $c1, string $c2): ?array {
+    $script = __DIR__ . '/../ast_analyzer.py';
+    if (!file_exists($script)) return null;
+
+    // JSON en base64 para evitar problemas con comillas y saltos de línea
+    $payload = base64_encode(json_encode(['code1' => $c1, 'code2' => $c2]));
+    $python  = self::find_python();
+    if (!$python) return null;
+
+    $cmd = escapeshellcmd($python) . ' ' . escapeshellarg($script)
+         . ' ' . escapeshellarg($payload);
+
+    $descriptors = [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
+    $process = proc_open($cmd, $descriptors, $pipes);
+    if (!is_resource($process)) return null;
+
+    fclose($pipes[0]);
+    $output = stream_get_contents($pipes[1]);
+    fclose($pipes[1]); fclose($pipes[2]);
+    proc_close($process);
+
+    $data = json_decode(trim($output), true);
+    return isset($data['similarity']) ? $data : null;
+}
+```
+
+### 2.4 Capa semántica con OpenAI (detección de plagio lógico)
+
+```php
+private static function semantic_similarity_ai(string $c1, string $c2): array {
+    $system = <<<PROMPT
+Eres un experto en detección de plagio de código fuente para un sistema académico.
+Detecta técnicas de ofuscación como:
+- Renombrado de variables o funciones
+- Cambio de tipo de bucle (for ↔ while ↔ recursión)
+- Reordenación de sentencias independientes
+- Inserción de código muerto o comentarios falsos
+- Cambio de operadores equivalentes (i++ ↔ i+=1 ↔ i=i+1)
+
+Responde ÚNICAMENTE en JSON:
+{
+  "similarity_score": <0-100>,
+  "analysis": "<explicación en español, máx 3 oraciones>",
+  "techniques_found": ["técnica1"],
+  "verdict": "original" | "sospechoso" | "plagio"
+}
+PROMPT;
+
+    // ... llamada a OpenAI API con gpt-4o-mini, temperature 0.2 ...
+    return [
+        'score'    => floatval($content['similarity_score'] ?? 0),
+        'analysis' => $content['analysis'] ?? '',
+        'verdict'  => $content['verdict'] ?? 'unknown',
+    ];
+}
+```
+
+### 2.5 Reporte masivo con caché inteligente
+
+```php
+public static function generate_plagiarism_report(int $assignmentid, bool $nosem = false, bool $force = false): array {
+    // Verificar caché: solo recalcular si hay submissions nuevas
+    $cache_key  = 'plagiarism_report_' . $assignmentid . ($nosem ? '_fast' : '_full');
+    $cache      = \cache::make('mod_aiassignment', 'plagiarism');
+    $cached     = $cache->get($cache_key);
+    $latest_sub = $DB->get_field_sql(
+        "SELECT MAX(timecreated) FROM {aiassignment_submissions} WHERE assignment = :a",
+        ['a' => $assignmentid]
+    );
+    if (!$force && $cached && $cached['generated_at'] >= (int)$latest_sub) {
+        return array_merge($cached, ['from_cache' => true]);
+    }
+
+    // Tomar el último envío por usuario (el más reciente)
+    $sql = "SELECT s.* FROM {aiassignment_submissions} s
+            INNER JOIN (
+                SELECT userid, MAX(id) as maxid
+                FROM {aiassignment_submissions}
+                WHERE assignment = :assignment GROUP BY userid
+            ) latest ON s.id = latest.maxid";
+
+    $submissions = array_values($DB->get_records_sql($sql, ['assignment' => $assignmentid]));
+
+    // Comparar todos contra todos: O(n²/2)
+    for ($i = 0; $i < count($submissions); $i++) {
+        for ($j = $i + 1; $j < count($submissions); $j++) {
+            $result   = self::compare_code($submissions[$i]->answer, $submissions[$j]->answer, $nosem);
+            $matrix[] = [
+                'similarity_score' => $result['final_score'],
+                'verdict'          => $result['verdict'],
+                'is_suspicious'    => $result['final_score'] >= self::get_threshold_high(),
+                'techniques'       => $result['techniques_detected'],
+            ];
+        }
+    }
+    // ... ordenar, guardar en caché y retornar ...
+}
 ```
 
 ---
 
-## 4. Evaluación con OpenAI GPT
+## 3. AI Evaluator
 
-**Archivo:** `moodle-plugin/classes/ai_evaluator.php`
+**Archivo:** `moodle-plugin/classes/ai_evaluator.php`  
+**Rol:** Evalúa respuestas de estudiantes con OpenAI usando prompts especializados por tipo de tarea.
 
-**Qué hace:** Envía el código del alumno y la solución del profesor a OpenAI GPT-4o-mini y recibe una calificación estructurada en JSON con score, feedback, confianza y errores específicos.
+### 3.1 Dispatcher principal con caché y rate limiting
 
-**Por qué es importante:** La temperatura 0.2 reduce la variabilidad entre evaluaciones del mismo código. El `response_format: json_object` garantiza que la respuesta siempre sea JSON parseable. Los reintentos con backoff exponencial manejan los errores de rate limit de la API.
+```php
+public static function evaluate(
+    string $studentanswer,
+    string $teachersolution,
+    string $type,
+    ?array $rubric = null
+): array {
+    // Caché: evitar re-evaluar la misma respuesta
+    $cache_key_extra = $rubric ? md5(json_encode($rubric)) : 'norubric';
+    $cached = \mod_aiassignment\eval_cache::get($studentanswer, $teachersolution, $type . $cache_key_extra);
+    if ($cached !== null) return array_merge($cached, ['from_cache' => true]);
+
+    // Rate limiting: máx N llamadas por hora a OpenAI
+    $cache     = \cache::make('mod_aiassignment', 'plagiarism');
+    $rate_key  = 'openai_eval_calls_' . date('YmdH');
+    $call_count = (int)$cache->get($rate_key);
+    $max_calls  = (int)(get_config('mod_aiassignment', 'openai_max_calls_per_hour') ?: 100);
+    if ($call_count >= $max_calls) {
+        throw new \moodle_exception('openai_rate_exceeded', 'mod_aiassignment');
+    }
+
+    // Evaluación con rúbrica personalizada (si aplica)
+    if ($rubric !== null) {
+        $rubric_result = \mod_aiassignment\rubric_evaluator::evaluate(
+            $studentanswer, $teachersolution, $type, $rubric
+        );
+        return ['similarity_score' => $rubric_result['total_score'],
+                'feedback' => $rubric_result['feedback'], 'confidence' => 90];
+    }
+
+    // Evaluación estándar + análisis de complejidad para código
+    $result = self::call_openai_api($apikey, $model,
+        self::get_system_prompt($type),
+        self::get_user_prompt($studentanswer, $teachersolution, $type)
+    );
+    if (in_array($type, ['programming', 'debugging'])) {
+        $complexity = \mod_aiassignment\complexity_analyzer::analyze($studentanswer);
+        $result['similarity_score'] = min(100, max(0,
+            $result['similarity_score'] + $complexity['score_bonus']
+        ));
+    }
+    $cache->set($rate_key, $call_count + 1);
+    return $result;
+}
+```
+
+### 3.2 Prompts especializados por tipo de tarea
+
+```php
+private static function get_system_prompt(string $type): string {
+    $base = 'Eres un evaluador académico experto. Responde ÚNICAMENTE en JSON: ' .
+            '{"similarity_score": 0-100, "feedback": "texto breve en español (máx 3 oraciones)", ' .
+            '"analysis": "análisis detallado", "confidence": 0-100, ' .
+            '"errors": [{"line": "...", "issue": "...", "suggestion": "..."}]}';
+
+    switch ($type) {
+        case 'programming':
+            return $base . ' Evalúa: (1) Corrección funcional (2) Calidad del código '
+                         . '(3) Eficiencia algorítmica (4) Buenas prácticas. Detecta el lenguaje automáticamente.';
+        case 'math':
+            return $base . ' Acepta métodos alternativos válidos. '
+                         . 'Si el resultado es correcto con método diferente, score >= 85.';
+        case 'sql':
+            return $base . ' Evalúa sintaxis, eficiencia (índices, JOINs) y seguridad (SQL injection). '
+                         . 'Acepta variantes equivalentes (subconsulta vs JOIN).';
+        case 'debugging':
+            return $base . ' Lista cada bug encontrado/no encontrado en el campo errors.';
+        // ... essay, pseudocode ...
+    }
+}
+```
+
+### 3.3 Llamada a OpenAI con reintentos y backoff exponencial
 
 ```php
 private static function call_openai_api(
     string $apikey, string $model,
     string $systemprompt, string $userprompt
 ): array {
-    $url  = 'https://api.openai.com/v1/chat/completions';
     $data = [
-        'model'           => $model,           // 'gpt-4o-mini'
+        'model'           => $model,          // gpt-4o-mini por defecto
         'messages'        => [
             ['role' => 'system', 'content' => $systemprompt],
             ['role' => 'user',   'content' => $userprompt],
         ],
-        'temperature'     => 0.2,              // baja variabilidad = resultados consistentes
-        'response_format' => ['type' => 'json_object'], // garantiza JSON válido siempre
+        'temperature'     => 0.2,             // baja aleatoriedad para evaluación consistente
+        'response_format' => ['type' => 'json_object'],
     ];
 
-    $maxretries = 2;
+    $maxretries = (int)(get_config('mod_aiassignment', 'openai_retries') ?: 2);
 
     for ($attempt = 1; $attempt <= $maxretries; $attempt++) {
-        $curl     = new \curl();
-        $response = $curl->post($url, json_encode($data), [
-            'CURLOPT_HTTPHEADER' => [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $apikey,
-            ],
-        ]);
+        try {
+            $curl     = new \curl();
+            $response = $curl->post('https://api.openai.com/v1/chat/completions',
+                json_encode($data), $options);
 
-        $result = json_decode($response, true);
-
-        // Manejar errores de la API
-        if (isset($result['error'])) {
-            $code = $result['error']['code'] ?? '';
-            // Solo reintentar en errores temporales (rate limit o servidor)
-            if ($attempt < $maxretries && in_array($code, ['rate_limit_exceeded', 'server_error'])) {
-                sleep(2 * $attempt); // backoff: 2s, 4s, 6s...
-                continue;
+            $result  = json_decode($response, true);
+            if (isset($result['error'])) {
+                $code = $result['error']['code'] ?? '';
+                if ($attempt < $maxretries && in_array($code, ['rate_limit_exceeded', 'server_error'])) {
+                    sleep(2 * $attempt);  // backoff exponencial
+                    continue;
+                }
+                throw new \Exception('OpenAI API Error: ' . $result['error']['message']);
             }
-            throw new \Exception('OpenAI: ' . $result['error']['message']);
+
+            $content = json_decode($result['choices'][0]['message']['content'], true);
+            return [
+                'similarity_score' => min(100, max(0, floatval($content['similarity_score']))),
+                'feedback'         => $content['feedback'] ?? '',
+                'confidence'       => min(100, max(0, intval($content['confidence'] ?? 80))),
+                'errors'           => is_array($content['errors'] ?? null) ? $content['errors'] : [],
+            ];
+        } catch (\Exception $e) {
+            if ($attempt < $maxretries) sleep(2 * $attempt);
+            $lasterror = $e;
         }
+    }
+    throw $lasterror;
+}
+```
 
-        $content = json_decode($result['choices'][0]['message']['content'], true);
+---
 
-        return [
-            'similarity_score' => min(100, max(0, floatval($content['similarity_score']))),
-            'feedback'         => $content['feedback'] ?? '',
-            'analysis'         => $content['analysis'] ?? '',
-            'confidence'       => min(100, max(0, intval($content['confidence'] ?? 80))),
-            'errors'           => $content['errors'] ?? [],
+## 4. Code Executor
+
+**Archivo:** `moodle-plugin/classes/code_executor.php`  
+**Rol:** Ejecuta código del estudiante contra test cases reales usando Judge0 API.
+
+### 4.1 Ejecución real con test cases
+
+```php
+public static function run(string $code, string $language, array $testcases): array {
+    $lang_id = self::LANGUAGES[strtolower($language)] ?? 71; // 71 = Python 3
+    $results = [];
+    $passed  = 0;
+
+    foreach ($testcases as $i => $tc) {
+        $result   = self::execute_single($code, $lang_id, $tc['input'] ?? '', $apikey, $apiurl, $apihost);
+        $actual   = trim($result['stdout'] ?? '');
+        $expected = trim($tc['expected'] ?? '');
+        $correct  = ($actual === $expected);
+        if ($correct) $passed++;
+
+        $results[] = [
+            'test_num'  => $i + 1,
+            'passed'    => $correct,
+            'expected'  => $expected,
+            'actual'    => $actual,
+            'time_ms'   => round(($result['time'] ?? 0) * 1000),
+            'memory_kb' => $result['memory'] ?? 0,
+            'status'    => $result['status']['description'] ?? 'Unknown',
+            'stderr'    => $result['stderr'] ?? '',
         ];
     }
+    $total = count($testcases);
+    return ['results' => $results, 'passed' => $passed,
+            'total' => $total, 'score' => $total > 0 ? round($passed / $total * 100, 2) : 0];
 }
 ```
 
-**Prompt del sistema para código de programación:**
-```php
-$system = 'Eres un evaluador académico experto. Responde ÚNICAMENTE en JSON:
-{
-  "similarity_score": 0-100,
-  "feedback": "texto breve en español (máx 3 oraciones)",
-  "analysis": "análisis detallado por criterio",
-  "confidence": 0-100,
-  "errors": [{"line": "...", "issue": "...", "suggestion": "..."}]
-}
-Evalúa: (1) Corrección funcional (2) Calidad del código
-(3) Eficiencia algorítmica (4) Buenas prácticas.';
-```
-
----
-
-## 5. Detección de técnicas de ofuscación
-
-**Archivo:** `moodle-plugin/classes/plagiarism/obfuscation_detector.php`
-
-**Qué hace:** Identifica 6 técnicas que los estudiantes usan para disfrazar código copiado. Cada técnica detectada suma +5 puntos al score final.
-
-**Por qué es importante:** Sin este módulo, un alumno que renombra todas las variables y agrega comentarios falsos podría bajar el score de 91% a 65% y evadir la detección. El detector contrarresta estas técnicas específicamente.
+### 4.2 Polling de resultado en Judge0
 
 ```php
-public static function detect(string $c1, string $c2, array $lex, array $struct): array
-{
-    $techniques = [];
+private static function execute_single(
+    string $code, int $lang_id, string $stdin,
+    string $apikey, string $apiurl, string $apihost
+): array {
+    // 1. Crear submission (base64 por seguridad)
+    $payload = json_encode([
+        'source_code'    => base64_encode($code),
+        'language_id'    => $lang_id,
+        'stdin'          => base64_encode($stdin),
+        'cpu_time_limit' => 5,       // 5 segundos máximo
+        'memory_limit'   => 128000,  // 128 MB máximo
+    ]);
+    // POST a /submissions → obtiene token
 
-    // ── Técnica 1: Renombrado de variables/funciones ──────────────────────
-    // Señal: similitud normalizada alta PERO Jaccard literal bajo
-    // (la estructura es igual pero los nombres cambiaron)
-    $raw_lex = lexical_analyzer::jaccard(
-        lexical_analyzer::tokenize($c1),  // tokens SIN normalizar
-        lexical_analyzer::tokenize($c2)
-    ) * 100;
-
-    if ($lex['score'] > 60 && $raw_lex < 40) {
-        $techniques[] = 'Renombrado de variables/funciones';
-    }
-
-    // ── Técnica 2: Cambio de tipo de bucle ────────────────────────────────
-    // Señal: diferente número de bucles pero estructura general similar
-    $loops1 = $struct['features1']['loops'] ?? 0;
-    $loops2 = $struct['features2']['loops'] ?? 0;
-    if ($loops1 !== $loops2 && $struct['score'] > 55) {
-        $techniques[] = 'Cambio de tipo de bucle (for/while/recursión)';
-    }
-
-    // ── Técnica 3: Reordenación de sentencias ─────────────────────────────
-    // Señal: mismos tokens ordenados alfabéticamente (Jaccard alto)
-    // pero diferente secuencia (LCS bajo)
-    $tokens1 = lexical_analyzer::tokenize(lexical_analyzer::normalize_identifiers($c1));
-    $tokens2 = lexical_analyzer::tokenize(lexical_analyzer::normalize_identifiers($c2));
-    $sorted1 = $tokens1; sort($sorted1);
-    $sorted2 = $tokens2; sort($sorted2);
-    $sorted_sim = lexical_analyzer::jaccard($sorted1, $sorted2);
-    if ($sorted_sim > 0.85 && ($lex['lcs'] ?? 0) < 70) {
-        $techniques[] = 'Reordenación de sentencias';
-    }
-
-    // ── Técnica 4: Inserción de código muerto ─────────────────────────────
-    // Señal: diferencia de tamaño >30% con similitud léxica alta
-    $len1 = strlen(preg_replace('/\s+/', '', $c1));
-    $len2 = strlen(preg_replace('/\s+/', '', $c2));
-    $size_diff = $len1 > 0 ? abs($len1 - $len2) / max($len1, $len2) : 0;
-    if ($size_diff > 0.30 && $lex['score'] > 55) {
-        $techniques[] = 'Posible inserción de código muerto o padding';
-    }
-
-    // ── Técnica 5: Cambio de operadores equivalentes ──────────────────────
-    // i++ → i+=1 → i=i+1 son equivalentes pero parecen diferentes
-    $ops1 = self::normalize_operators($c1); // normaliza i++ → i+=1
-    $ops2 = self::normalize_operators($c2);
-    $ops_sim = lexical_analyzer::jaccard(
-        lexical_analyzer::tokenize($ops1),
-        lexical_analyzer::tokenize($ops2)
-    ) * 100;
-    if ($ops_sim > 80 && ($lex['jaccard'] ?? 0) < 60) {
-        $techniques[] = 'Cambio de operadores equivalentes (i++ ↔ i+=1)';
-    }
-
-    // ── Técnica 6: Inserción de comentarios falsos ────────────────────────
-    // Señal: ratio de comentarios muy diferente entre los dos códigos
-    $cr1 = self::comment_ratio($c1);
-    $cr2 = self::comment_ratio($c2);
-    if (abs($cr1 - $cr2) > 0.20 && $lex['score'] > 50) {
-        $techniques[] = 'Inserción de comentarios falsos (ratio inusual)';
-    }
-
-    return $techniques; // cada técnica suma +5 al score final
-}
-```
-
----
-
-## 6. Fórmula del score final
-
-**Archivo:** `moodle-plugin/classes/plagiarism_detector.php`
-
-**Qué hace:** Combina los scores de las 3 capas con pesos ponderados y aplica un boost por técnicas de ofuscación detectadas.
-
-```
-score_final   = (léxica × 0.35) + (estructural × 0.30) + (semántica × 0.35)
-score_ajustado = min(100, score_final + técnicas_detectadas × 5)
-```
-
-**Implementación:**
-```php
-private static function get_verdict(float $score, array $techniques): string
-{
-    // Cada técnica de ofuscación detectada sube el nivel de alerta
-    $boost    = count($techniques) * 5;
-    $adjusted = min(100, $score + $boost);
-
-    if ($adjusted >= 75) return 'plagio';      // 🔴 Plagio probable
-    if ($adjusted >= 50) return 'sospechoso';  // 🟡 Sospechoso
-    return 'original';                          // 🟢 Original
-}
-```
-
-**Ejemplos reales del experimento con 30 alumnos:**
-
-| Par | Léxica | Estructural | Semántica | Score | Técnica | Ajustado | Veredicto |
-|-----|--------|-------------|-----------|-------|---------|----------|-----------|
-| est01 vs est02 | 87.3% | 91.2% | 95.0% | 91.0% | Renombrado (+5) | 96.0% | 🔴 Plagio |
-| est15 vs est01 | 52.1% | 61.3% | 62.0% | 58.3% | — | 58.3% | 🟡 Sospechoso |
-| est23 vs est01 | 8.1% | 12.3% | 9.0% | 9.8% | — | 9.8% | 🟢 Original |
-
----
-
-## 7. Caché inteligente del reporte de plagio
-
-**Archivo:** `moodle-plugin/classes/plagiarism_detector.php`
-
-**Qué hace:** Guarda el reporte de plagio en caché de Moodle y lo invalida automáticamente solo cuando llega un nuevo envío. Sin esto, cada apertura del reporte recalcularía 435 comparaciones (30 alumnos).
-
-**Por qué es importante:** Reduce el tiempo de carga del reporte de ~4 minutos a instantáneo cuando no hay envíos nuevos. La validación por `MAX(timecreated)` es la clave — no usa TTL fijo sino que compara timestamps.
-
-```php
-public static function generate_plagiarism_report(int $assignmentid, bool $nosem = false): array
-{
-    global $DB;
-
-    $cache_key = 'plagiarism_report_' . $assignmentid . ($nosem ? '_fast' : '_full');
-    $cache     = \cache::make('mod_aiassignment', 'plagiarism');
-
-    // ── Verificar si la caché sigue siendo válida ─────────────────────────
-    $cached     = $cache->get($cache_key);
-    $latest_sub = (int)$DB->get_field_sql(
-        "SELECT MAX(timecreated) FROM {aiassignment_submissions} WHERE assignment = :a",
-        ['a' => $assignmentid]
-    );
-
-    // La caché es válida si fue generada DESPUÉS del último envío
-    if ($cached && isset($cached['generated_at']) && $cached['generated_at'] >= $latest_sub) {
-        $cached['from_cache'] = true;
-        return $cached; // ← Retorno instantáneo sin recalcular
-    }
-
-    // ── Calcular reporte completo ─────────────────────────────────────────
-    // Tomar solo el último envío por usuario (no comparar intentos anteriores)
-    $sql = "SELECT s.* FROM {aiassignment_submissions} s
-            INNER JOIN (
-                SELECT userid, MAX(id) as maxid
-                FROM {aiassignment_submissions}
-                WHERE assignment = :assignment
-                GROUP BY userid
-            ) latest ON s.id = latest.maxid";
-
-    $submissions = array_values($DB->get_records_sql($sql, ['assignment' => $assignmentid]));
-
-    // Comparar todos los pares: n*(n-1)/2 comparaciones
-    // Con 30 alumnos = 435 comparaciones
-    $matrix = [];
-    for ($i = 0; $i < count($submissions); $i++) {
-        for ($j = $i + 1; $j < count($submissions); $j++) {
-            $result   = self::compare_code($submissions[$i]->answer, $submissions[$j]->answer, $nosem);
-            $matrix[] = [...]; // guardar resultado
+    // 2. Polling hasta obtener resultado (status_id > 2 = terminado)
+    for ($attempt = 0; $attempt < 10; $attempt++) {
+        sleep(1);
+        $res       = json_decode(curl_exec($curl), true);  // GET /submissions/{token}
+        $status_id = $res['status']['id'] ?? 0;
+        if ($status_id > 2) {
+            return [
+                'stdout'         => $res['stdout'] ? base64_decode($res['stdout']) : '',
+                'stderr'         => $res['stderr'] ? base64_decode($res['stderr']) : '',
+                'compile_output' => $res['compile_output'] ? base64_decode($res['compile_output']) : '',
+                'time'           => $res['time'] ?? 0,
+                'memory'         => $res['memory'] ?? 0,
+                'status'         => $res['status'],
+            ];
         }
     }
-
-    $report = ['detailed_comparisons' => $matrix, 'generated_at' => time(), ...];
-
-    // Guardar en caché para la próxima consulta
-    $cache->set($cache_key, $report);
-
-    return $report;
+    throw new \Exception("Timeout esperando resultado de Judge0");
 }
 ```
 
 ---
 
-## 8. Integración con Moodle — query consolidada
+## 5. Submit
 
-**Archivo:** `moodle-plugin/lib.php`
+**Archivo:** `moodle-plugin/submit.php`  
+**Rol:** Orquesta el pipeline completo al recibir un envío de estudiante.
 
-**Qué hace:** Calcula 5 estadísticas del curso en una sola query SQL usando `SUM(CASE WHEN)` en lugar de 5 queries separadas.
-
-**Por qué es importante:** Esta optimización redujo el tiempo de carga del dashboard de ~800ms a ~187ms. Es el patrón que permite que el dashboard cargue rápido incluso con 100+ alumnos.
+### 5.1 Validaciones de seguridad y anti-trampa
 
 ```php
-function aiassignment_get_course_statistics(int $courseid): object
-{
+// 1. Sanitizar código con clase centralizada de seguridad
+$answer = \mod_aiassignment\security::sanitize_code($answer, $maxlen);
+
+// 2. Verificar intentos máximos
+$attemptcount = $DB->count_records('aiassignment_submissions',
+    ['assignment' => $aiassignment->id, 'userid' => $USER->id]);
+if ($aiassignment->maxattempts > 0 && $attemptcount >= $aiassignment->maxattempts) {
+    redirect(..., get_string('maxattemptsreached', 'aiassignment'), NOTIFY_ERROR);
+}
+
+// 3. Rate limiting por usuario
+\mod_aiassignment\security::check_rate_limit($USER->id, $aiassignment->id);
+
+// 4. Detectar envío duplicado (mismo contenido que el anterior)
+$recentsub = $DB->get_record_sql(
+    "SELECT answer FROM {aiassignment_submissions}
+     WHERE assignment = :a AND userid = :u ORDER BY timecreated DESC LIMIT 1",
+    ['a' => $aiassignment->id, 'u' => $USER->id]
+);
+if ($recentsub && trim($recentsub->answer) === $answer) {
+    redirect(..., get_string('duplicateanswer', 'aiassignment'), NOTIFY_WARNING);
+}
+```
+
+### 5.2 Detección de comportamiento sospechoso
+
+```php
+// Detectar código generado por IA
+$ai_detection = \mod_aiassignment\ai_detector::detect($answer, $aiassignment->type);
+if ($ai_detection['score'] >= 70) {
+    $submission->feedback = '[⚠️ POSIBLE IA: ' . $ai_detection['label'] .
+        ' (' . $ai_detection['score'] . '%)] ' . implode('; ', $ai_detection['signals']);
+}
+
+// Detectar cambios de pestaña (modo examen)
+$tab_switches = optional_param('tab_switches', 0, PARAM_INT);
+if ($tab_switches > 0) {
+    $submission->feedback .= ' [🔒 EXAMEN: ' . $tab_switches . ' cambio(s) de pestaña detectado(s)]';
+}
+
+// Analizar comportamiento del editor: pegar masivo, velocidad de tipeo
+$events = json_decode(optional_param('editor_events', '', PARAM_RAW), true);
+if (is_array($events) && !empty($events)) {
+    $behavior = \mod_aiassignment\behavior_tracker::analyze($events, $answer);
+    if ($behavior['suspicious']) {
+        $submission->feedback .= ' [⚠️ COMPORTAMIENTO: ' . implode('; ', $behavior['signals']) .
+            ' | Pegados: ' . $behavior['paste_count'] .
+            ' | Velocidad: ' . $behavior['typing_speed'] . ' cpm]';
+    }
+}
+```
+
+### 5.3 Evaluación sincrónica con notificación al estudiante
+
+```php
+$evaluation = \mod_aiassignment\ai_evaluator::evaluate(
+    $answer, $aiassignment->solution, $aiassignment->type, $rubric
+);
+
+// Guardar evaluación en BD
+$evalrecord->submission       = $submission->id;
+$evalrecord->similarity_score = $evaluation['similarity_score'];
+$evalrecord->ai_feedback      = $evaluation['feedback'];
+$DB->insert_record('aiassignment_evaluations', $evalrecord);
+
+// Actualizar libro de calificaciones de Moodle
+aiassignment_update_grades($aiassignment, $USER->id);
+
+// Notificar al estudiante por mensajería interna de Moodle
+$message->component   = 'mod_aiassignment';
+$message->name        = 'submission_graded';
+$message->smallmessage = get_string('notif_graded_small', 'aiassignment',
+    round($evaluation['similarity_score'], 2));
+message_send($message);
+
+// Mostrar encuesta de satisfacción cada 3 intentos
+$show_survey = ($submission->attempt % 3 === 0);
+if ($show_survey) {
+    redirect(new moodle_url('/mod/aiassignment/satisfaction_survey.php', [...]), ...);
+}
+```
+
+---
+
+## 6. Lib
+
+**Archivo:** `moodle-plugin/lib.php`  
+**Rol:** Funciones requeridas por la API de Moodle e integración con el libro de calificaciones.
+
+### 6.1 Actualización del libro de calificaciones
+
+```php
+function aiassignment_get_user_grades($aiassignment, $userid = 0) {
     global $DB;
+    $sql = "SELECT userid, MAX(score) as rawgrade, MAX(timecreated) as dategraded
+            FROM {aiassignment_submissions}
+            WHERE assignment = :assignment AND status = 'evaluated' $usersql
+            GROUP BY userid";
 
-    // UNA sola query con agregaciones múltiples
-    // Antes: 5 queries separadas → ~800ms
-    // Ahora: 1 query consolidada → ~187ms
-    return $DB->get_record_sql("
-        SELECT
-            COUNT(DISTINCT a.id)                                        AS total_assignments,
-            COUNT(s.id)                                                 AS total_submissions,
-            COALESCE(AVG(s.score), 0)                                   AS average_grade,
-            COUNT(DISTINCT s.userid)                                    AS active_students,
-            SUM(CASE WHEN s.status = 'flagged'    THEN 1 ELSE 0 END)   AS flagged_count,
-            SUM(CASE WHEN s.status = 'pending'    THEN 1 ELSE 0 END)   AS pending_evaluations,
-            SUM(CASE WHEN s.status = 'evaluated'  THEN 1 ELSE 0 END)   AS evaluated_count
-        FROM {aiassignment} a
-        LEFT JOIN {aiassignment_submissions} s ON s.assignment = a.id
-        WHERE a.course = :courseid",
-        ['courseid' => $courseid]
-    );
+    $grades = $DB->get_records_sql($sql, $params);
+
+    // Convertir score (0–100) a la escala de calificación configurada en Moodle
+    foreach ($grades as $grade) {
+        $grade->rawgrade = ($grade->rawgrade / 100) * $aiassignment->grade;
+    }
+    return $grades;
 }
 ```
 
-**Distribución de calificaciones también en una sola query:**
+### 6.2 Estadísticas del curso en una sola query
+
 ```php
-// En lugar de cargar todos los envíos y agrupar en PHP:
-$dist_sql = "SELECT
-    SUM(CASE WHEN s.score >= 90              THEN 1 ELSE 0 END) AS g90,
-    SUM(CASE WHEN s.score >= 80 AND s.score < 90 THEN 1 ELSE 0 END) AS g80,
-    SUM(CASE WHEN s.score >= 70 AND s.score < 80 THEN 1 ELSE 0 END) AS g70,
-    SUM(CASE WHEN s.score >= 60 AND s.score < 70 THEN 1 ELSE 0 END) AS g60,
-    SUM(CASE WHEN s.score < 60                   THEN 1 ELSE 0 END) AS glow
-FROM {aiassignment_submissions} s
-JOIN {aiassignment} a ON s.assignment = a.id
-WHERE a.course = :courseid AND s.score IS NOT NULL";
+function aiassignment_get_course_statistics($courseid) {
+    global $DB;
+    list($insql, $params) = $DB->get_in_or_equal(array_keys($assignments));
+
+    // Una sola query consolidada — evita N+1 queries
+    $sql = "SELECT
+                COUNT(*)                                             AS total_submissions,
+                AVG(CASE WHEN s.score IS NOT NULL THEN s.score END) AS average_grade,
+                COUNT(DISTINCT s.userid)                            AS active_students,
+                SUM(CASE WHEN s.status = 'pending' THEN 1 ELSE 0 END) AS pending_evaluations
+            FROM {aiassignment_submissions} s
+            WHERE s.assignment $insql";
+
+    $r = $DB->get_record_sql($sql, $params);
+    $stats->total_submissions   = (int)$r->total_submissions;
+    $stats->average_grade       = $r->average_grade ? round($r->average_grade, 2) : 0;
+    $stats->active_students     = (int)$r->active_students;
+    $stats->pending_evaluations = (int)$r->pending_evaluations;
+    return $stats;
+}
+```
+
+### 6.3 Alumnos de alto riesgo con JOIN optimizado
+
+```php
+function aiassignment_get_high_risk_students($courseid) {
+    global $DB;
+    $sql = "SELECT u.id, u.firstname, u.lastname,
+                   MAX(e.similarity_score) as max_plag,
+                   s.id as submission_id, a.name as assignment_name
+            FROM {aiassignment_evaluations} e
+            JOIN {aiassignment_submissions} s ON s.id = e.submission
+            JOIN {aiassignment} a ON s.assignment = a.id
+            JOIN {user} u ON s.userid = u.id
+            WHERE a.course = :courseid
+              AND e.similarity_score >= 75   -- umbral configurable
+              AND u.username != 'admin'
+            GROUP BY u.id, u.firstname, u.lastname, s.id, a.name
+            ORDER BY max_plag DESC";
+    return $DB->get_records_sql($sql, ['courseid' => $courseid]);
+}
 ```
 
 ---
 
-## Resumen: Decisiones técnicas clave
+## 7. Generador de Prueba
 
-| Decisión | Alternativa descartada | Razón |
-|----------|----------------------|-------|
-| 3 capas de análisis | Solo Jaccard | Mayor precisión, detecta ofuscación avanzada |
-| Normalizar antes de comparar | Comparar texto directo | Resistencia al renombrado de variables |
-| AST real para Python | Regex para todos | Análisis estructural genuino, no aproximado |
-| Temperatura 0.2 en OpenAI | Temperatura 0.7 | Resultados consistentes entre evaluaciones |
-| Omitir IA si resultado obvio | Siempre llamar a IA | Reducción de costos de API hasta 60% |
-| Caché por timestamp | TTL fijo | Invalidación automática y precisa |
-| SUM(CASE WHEN) en SQL | Múltiples queries | Reducción de tiempo de carga 4x |
-| Proceso hijo para Python | Servidor Python separado | Sin dependencia de infraestructura adicional |
+**Archivo:** `scripts/generar-150-alumnos.js`  
+**Rol:** Genera SQL idempotente para poblar la BD con datos de prueba realistas.
+
+### 7.1 Distribución de tipos de envío
+
+```javascript
+function getTipo(i) {
+    const r = i % 5;
+    if (r === 1 || r === 2) return 'plagio';      // 40% — copia con renombrado
+    if (r === 3)             return 'sospechoso'; // 20% — lógica similar
+    return 'original';                             // 40% — código propio
+}
+
+// Código de ejemplo para cada tipo (Bubble Sort)
+const tarea = {
+    orig: (i) => `def bubble_sort_${i}(arr):\n    n=len(arr)\n    for i in range(n):...`,
+    plag: (i) => `def ordenar_${i}(lista):\n    tam=len(lista)\n    for i in range(tam):...`,
+    sosp: (i) => `def bubble_opt_${i}(arr):\n    ...\n    sw=False\n    if not sw: break...`,
+};
+```
+
+### 7.2 Evaluaciones con distribución de similitud realista
+
+```sql
+-- Asignar score de similitud según tipo de alumno detectado
+INSERT INTO oy1n_aiassignment_evaluations (submission, similarity_score, ...)
+SELECT s.id,
+  CASE
+    WHEN MOD(alumno_num, 5) IN (1,2) THEN 75 + MOD(alumno_num, 20)  -- plagio:     75–94%
+    WHEN MOD(alumno_num, 5) = 3      THEN 45 + MOD(alumno_num, 25)  -- sospechoso: 45–69%
+    ELSE                                   5 + MOD(alumno_num, 18)  -- original:   5–22%
+  END AS similarity_score
+FROM oy1n_aiassignment_submissions s ...
+```
+
+### 7.3 Verificación final del script
+
+```sql
+-- Conteos esperados tras ejecutar el script
+SELECT 'MAESTROS'         AS tipo, COUNT(*) AS total FROM oy1n_user WHERE username IN ('maestro01','maestro02','maestro03')
+UNION ALL SELECT 'ALUMNOS',       COUNT(*) FROM oy1n_user WHERE username LIKE 'al%_s0%'
+UNION ALL SELECT 'CURSOS',        COUNT(*) FROM oy1n_course WHERE shortname IN ('salon01',...'salon06')
+UNION ALL SELECT 'TAREAS',        COUNT(*) FROM oy1n_aiassignment a JOIN oy1n_course c ON a.course=c.id WHERE ...
+UNION ALL SELECT 'ENVIOS',        COUNT(*) FROM oy1n_aiassignment_submissions s JOIN oy1n_user u ON s.userid=u.id WHERE ...
+UNION ALL SELECT 'EVALUACIONES',  COUNT(*) FROM oy1n_aiassignment_evaluations e JOIN ... ;
+-- Esperado: 3, 150, 6, 12, 300, 300
+```
 
 ---
 
-*Documento generado para la defensa de tesis — Junio 2026*
-*AI Assignment Plugin v2.5.0 — mod_aiassignment*
+## 8. Audit Logger
+
+**Archivo:** `moodle-plugin/classes/audit_logger.php`  
+**Rol:** Registro de trazabilidad para todas las acciones importantes (calificaciones manuales, plagio confirmado, etc.).
+
+```php
+class audit_logger {
+    const ACTION_MANUAL_GRADE       = 'manual_grade';
+    const ACTION_REEVALUATE         = 'reevaluate';
+    const ACTION_PLAGIARISM_CONFIRM = 'plagiarism_confirm';
+    const ACTION_PLAGIARISM_DISMISS = 'plagiarism_dismiss';
+    const ACTION_RESUBMIT_REQUEST   = 'resubmit_request';
+
+    public static function log(
+        string $action, int $userid, int $targetid,
+        string $targettype = 'submission', array $data = []
+    ): void {
+        global $DB;
+        $record->action      = $action;
+        $record->userid      = $userid;
+        $record->targetid    = $targetid;
+        $record->ip          = getremoteaddr();   // IP para trazabilidad forense
+        $record->data        = json_encode($data, JSON_UNESCAPED_UNICODE);
+        $record->timecreated = time();
+        $DB->insert_record('aiassignment_audit_log', $record);
+    }
+
+    // Política de retención: elimina registros con más de N días
+    public static function cleanup(int $days = 365): int {
+        $cutoff = time() - ($days * 86400);
+        $count  = $DB->count_records_select('aiassignment_audit_log', 'timecreated < :t', ['t' => $cutoff]);
+        $DB->delete_records_select('aiassignment_audit_log', 'timecreated < :t', ['t' => $cutoff]);
+        return $count;
+    }
+}
+```
+
+---
+
+## Resumen de la Arquitectura
+
+```
+Envío del estudiante
+        │
+        ▼
+  submit.php ──── Validaciones: sanitización, rate limit, anti-duplicado
+        │
+        ├── ai_detector.php      → detecta código generado por IA
+        ├── behavior_tracker.php → detecta pegado masivo, velocidad anómala
+        │
+        ▼
+  ai_evaluator.php ─── OpenAI GPT-4o-mini (prompt especializado por tipo)
+        │                    ├── rubric_evaluator.php  (si hay rúbrica)
+        │                    └── complexity_analyzer.php (para código)
+        │
+        ▼
+  plagiarism_detector.php
+        ├── Capa 1: Léxica    → tokens normalizados + Jaccard + LCS
+        ├── Capa 2: Estructural → ast_analyzer.py (Python) / regex
+        └── Capa 3: Semántica  → OpenAI (solo si score ambiguo 20–85%)
+                │
+                └── ast_analyzer.py → módulo ast nativo de Python
+                        ├── cosine similarity (tipos de nodos)
+                        ├── Jaccard bigramas (secuencia estructural)
+                        └── metrics_sim (loops, funciones, recursión)
+        │
+        ▼
+  code_executor.php ── Judge0 API → ejecución real contra test cases
+        │
+        ▼
+  audit_logger.php ─── Registro de trazabilidad
+  lib.php ──────────── Libro de calificaciones Moodle
+```
+
+---
+
+*Documento generado automáticamente desde el código fuente del proyecto.*  
+*Plugin: `mod_aiassignment` | Moodle 4.0+ | Versión 2.4.0*
