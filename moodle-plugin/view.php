@@ -66,8 +66,36 @@ if ($aiassignment->intro) {
 // Mostrar información del problema
 echo $OUTPUT->box_start('generalbox');
 echo '<h3>' . get_string('problemdescription', 'aiassignment') . '</h3>';
-echo '<p><strong>' . get_string('type', 'aiassignment') . ':</strong> ' . 
+echo '<p><strong>' . get_string('type', 'aiassignment') . ':</strong> ' .
      get_string($aiassignment->type, 'aiassignment') . '</p>';
+
+// ── Mostrar lenguaje requerido al estudiante ──────────────────────────────
+$required_lang = trim($aiassignment->required_language ?? '');
+if (in_array($aiassignment->type, ['programming', 'debugging', 'sql'])) {
+    $lang_labels = [
+        'python'     => 'Python',
+        'javascript' => 'JavaScript',
+        'java'       => 'Java',
+        'cpp'        => 'C / C++',
+        'php'        => 'PHP',
+        'sql'        => 'SQL',
+        'typescript' => 'TypeScript',
+        'ruby'       => 'Ruby',
+        'go'         => 'Go',
+        'rust'       => 'Rust',
+        'pseudocode' => 'Pseudocódigo',
+    ];
+    if (!empty($required_lang) && isset($lang_labels[$required_lang])) {
+        $lang_display = $lang_labels[$required_lang];
+        echo '<div class="alert alert-info d-flex align-items-center" role="note" ' .
+             'style="border-left:4px solid #0c63e4;padding:10px 14px;margin:8px 0 12px;font-size:14px;">' .
+             get_string('language_required_hint', 'aiassignment', s($lang_display)) .
+             '</div>';
+    } else {
+        echo '<div style="color:#6c757d;font-size:13px;margin-bottom:10px;">' .
+             get_string('language_any_hint', 'aiassignment') . '</div>';
+    }
+}
 
 if ($aiassignment->documentation) {
     echo '<div class="documentation">';

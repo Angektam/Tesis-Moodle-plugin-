@@ -221,3 +221,18 @@ $string['aria_sort_column']     = 'Sort by this column';
 // Data cleanup
 $string['task_cleanup']         = 'Clean up old data';
 $string['task_analyze_plagiarism'] = 'Background plagiarism analysis';
+
+// ── Language enforcement (v2.5) ───────────────────────────────────────────
+
+// Form
+$string['required_language']      = 'Required programming language';
+$string['required_language_help'] = 'Restrict submissions to a specific language. Students who submit in a different language will see an error. Leave empty to accept any language.';
+$string['lang_any']               = '— Any language —';
+
+// Validation error shown to the student
+$string['wrong_language']         = '❌ This assignment requires {$a->required}. Your code appears to be written in {$a->detected}. Please rewrite your solution in {$a->required}.';
+$string['wrong_language_unknown'] = '❌ This assignment requires {$a->required}. Please make sure your solution is written in {$a->required}.';
+
+// Shown in the assignment view (student hint)
+$string['language_required_hint'] = '🔤 Required language: <strong>{$a}</strong>';
+$string['language_any_hint']      = '🔤 Any programming language accepted';

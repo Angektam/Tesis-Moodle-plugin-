@@ -314,4 +314,101 @@ class security {
         $expected = self::generate_action_token($userid, $action);
         return hash_equals($expected, $token);
     }
+
+    // ── Detección de lenguaje de programación ─────────────────────────────────
+
+    /**
+     * Detecta el lenguaje de programación del código del estudiante.
+     *
+     * Devuelve uno de: python, javascript, java, cpp, php, sql, typescript,
+     * ruby, go, rust — o cadena vacía si no se puede determinar.
+     *
+     * @param string $code  Código fuente del estudiante
+     * @return string  Clave del lenguaje detectado (igual a las claves de LANGUAGES en code_executor)
+     */
+    public static function detect_language(string $code): string {
+        // Python: def, elif, indentación con dos puntos, import/from
+        $py = 0;
+        foreach (['/\bdef\s+\w+\s*\(/', '/\belif\b/', '/^from\s+\w+\s+import\b/m',
+                  '/^import\s+\w/m', '/print\s*\(/', '/:\s*\n\s+/'] as $p) {
+            if (preg_match($p, $code)) $py++;
+        }
+        if ($py >= 2) return 'python';
+
+        // TypeScript: tipos explícitos con :, import/export ES6, interface, enum
+        $ts = 0;
+        foreach (['/:\s*(string|number|boolean|void|any|unknown)\b/', '/\binterface\s+\w+\s*{/',
+                  '/\benum\s+\w+\s*{/', '/\bimport\s+.*\s+from\s+[\'"]/', '/\bexport\s+(default\s+)?class\b/'] as $p) {
+            if (preg_match($p, $code)) $ts++;
+        }
+        if ($ts >= 2) return 'typescript';
+
+        // Java: public class, System.out, import java., tipos primitivos con mayúscula
+        $java = 0;
+        foreach (['/\bpublic\s+class\b/', '/\bSystem\.out\.print/', '/\bimport\s+java\./',
+                  '/\bpublic\s+static\s+void\s+main/', '/\bString\[\]\s+args\b/'] as $p) {
+            if (preg_match($p, $code)) $java++;
+        }
+        if ($java >= 1) return 'java';
+
+        // JavaScript: console.log, const/let/var, arrow functions, require/module.exports
+        $js = 0;
+        foreach (['/\bconsole\.log\b/', '/\bconst\b|\blet\b/', '/=>\s*[{(]/',
+                  '/\brequire\s*\(/', '/\bmodule\.exports\b/', '/\bdocument\.\w+/'] as $p) {
+            if (preg_match($p, $code)) $js++;
+        }
+        if ($js >= 2) return 'javascript';
+
+        // C / C++: #include, printf, int main, cout, std::
+        $cpp = 0;
+        foreach (['/\b#include\b/', '/\bprintf\s*\(/', '/\bint\s+main\s*\(/',
+                  '/\bcout\s*<</', '/\bstd::/', '/\bmalloc\s*\(/'] as $p) {
+            if (preg_match($p, $code)) $cpp++;
+        }
+        if ($cpp >= 1) return 'cpp';
+
+        // PHP: <?php, $variables
+        if (preg_match('/<\?php\b/', $code) || preg_match('/\$[a-zA-Z_]\w*\s*=/', $code)) {
+            return 'php';
+        }
+
+        // SQL: SELECT/INSERT/UPDATE/DELETE + FROM/INTO/SET/WHERE
+        $sql = 0;
+        foreach (['/\bSELECT\b/i', '/\bINSERT\s+INTO\b/i', '/\bUPDATE\b/i',
+                  '/\bDELETE\s+FROM\b/i', '/\bFROM\b/i', '/\bWHERE\b/i', '/\bJOIN\b/i'] as $p) {
+            if (preg_match($p, $code)) $sql++;
+        }
+        if ($sql >= 2) return 'sql';
+
+        // Ruby: def ... end, puts, require
+        $ruby = 0;
+        foreach (['/\bdef\s+\w+/', '/\bend\b/', '/\bputs\b/', '/\brequire\s+[\'"]/',
+                  '/\battr_accessor\b/', '/\bdo\s*\|/'] as $p) {
+            if (preg_match($p, $code)) $ruby++;
+        }
+        if ($ruby >= 2) return 'ruby';
+
+        // Go: func, :=, import, package main
+        $go = 0;
+        foreach (['/\bfunc\s+\w+\s*\(/', '/\bpackage\s+main\b/', '/\bfmt\.Print/',
+                  '/\bimport\s+\(/', '/:=/', '/\bvar\s+\w+\s+\w+/'] as $p) {
+            if (preg_match($p, $code)) $go++;
+        }
+        if ($go >= 2) return 'go';
+
+        // Rust: fn, let mut, use std::, println!
+        $rust = 0;
+        foreach (['/\bfn\s+\w+\s*\(/', '/\blet\s+mut\b/', '/\buse\s+std::/',
+                  '/\bprintln!\s*\(/', '/\bmatch\s+\w+\s*{/', '/\bimpl\s+\w+/'] as $p) {
+            if (preg_match($p, $code)) $rust++;
+        }
+        if ($rust >= 2) return 'rust';
+
+        // Re-intentar Python con umbral más bajo (1 señal fuerte)
+        if ($py >= 1) return 'python';
+        // Re-intentar JavaScript con umbral más bajo
+        if ($js >= 1) return 'javascript';
+
+        return '';  // No determinado
+    }
 }

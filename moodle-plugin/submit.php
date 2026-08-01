@@ -43,6 +43,56 @@ if ($aiassignment->type === 'programming' && !$has_code && strlen($answer) < 200
         null, \core\output\notification::NOTIFY_WARNING);
 }
 
+// 2b. Validar lenguaje de programación requerido
+$required_lang = trim($aiassignment->required_language ?? '');
+if (!empty($required_lang) && in_array($aiassignment->type, ['programming', 'debugging', 'sql'])) {
+    $detected_lang = \mod_aiassignment\security::detect_language($answer);
+    if (!empty($detected_lang) && $detected_lang !== $required_lang) {
+        $lang_labels = [
+            'python'     => 'Python',
+            'javascript' => 'JavaScript',
+            'java'       => 'Java',
+            'cpp'        => 'C / C++',
+            'php'        => 'PHP',
+            'sql'        => 'SQL',
+            'typescript' => 'TypeScript',
+            'ruby'       => 'Ruby',
+            'go'         => 'Go',
+            'rust'       => 'Rust',
+        ];
+        $required_label = $lang_labels[$required_lang] ?? $required_lang;
+        $detected_label = $lang_labels[$detected_lang] ?? $detected_lang;
+        redirect(
+            new moodle_url('/mod/aiassignment/view.php', ['id' => $cm->id]),
+            get_string('wrong_language', 'aiassignment', [
+                'required' => $required_label,
+                'detected' => $detected_label,
+            ]),
+            null,
+            \core\output\notification::NOTIFY_ERROR
+        );
+    }
+}
+
+// 2b. Validar lenguaje de programación requerido por el maestro
+$required_lang = trim($aiassignment->required_language ?? '');
+if (!empty($required_lang) && in_array($aiassignment->type, ['programming', 'debugging', 'sql'])) {
+    $detected_lang = \mod_aiassignment\language_validator::detect($answer);
+    if (!empty($detected_lang) && $detected_lang !== $required_lang) {
+        $lang_label = \mod_aiassignment\language_validator::label($required_lang);
+        $detected_label = \mod_aiassignment\language_validator::label($detected_lang);
+        redirect(
+            new moodle_url('/mod/aiassignment/view.php', ['id' => $cm->id]),
+            get_string('wrong_language', 'aiassignment', [
+                'required' => $lang_label,
+                'detected' => $detected_label,
+            ]),
+            null,
+            \core\output\notification::NOTIFY_ERROR
+        );
+    }
+}
+
 // 3. Verificar intentos máximos
 $attemptcount = $DB->count_records('aiassignment_submissions',
     ['assignment' => $aiassignment->id, 'userid' => $USER->id]);

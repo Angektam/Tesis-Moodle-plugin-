@@ -286,3 +286,18 @@ $string['aria_sort_column']     = 'Ordenar por esta columna';
 // Limpieza de datos (mejora: retención)
 $string['task_cleanup']         = 'Limpieza de datos antiguos';
 $string['task_analyze_plagiarism'] = 'Análisis de plagio en background';
+
+// ── Validación de lenguaje requerido (v2.5) ───────────────────────────────
+
+// Formulario de creación de tarea
+$string['required_language']      = 'Lenguaje de programación requerido';
+$string['required_language_help'] = 'Restringe los envíos a un lenguaje específico. Los estudiantes que envíen en un lenguaje diferente verán un error. Deja vacío para aceptar cualquier lenguaje.';
+$string['lang_any']               = '— Cualquier lenguaje —';
+
+// Error mostrado al estudiante al enviar en lenguaje incorrecto
+$string['wrong_language']         = '❌ Esta tarea requiere {$a->required}. Tu código parece estar escrito en {$a->detected}. Por favor reescribe tu solución en {$a->required}.';
+$string['wrong_language_unknown'] = '❌ Esta tarea requiere {$a->required}. Asegúrate de que tu solución esté escrita en {$a->required}.';
+
+// Pista mostrada al estudiante en la vista de la tarea
+$string['language_required_hint'] = '🔤 Lenguaje requerido: <strong>{$a}</strong>';
+$string['language_any_hint']      = '🔤 Se acepta cualquier lenguaje de programación';
