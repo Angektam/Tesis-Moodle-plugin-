@@ -112,6 +112,39 @@ if ($aiassignment->test_cases) {
 }
 echo $OUTPUT->box_end();
 
+// ── Banner de disponibilidad y deadline ───────────────────────────────────
+$now = time();
+if (!empty($aiassignment->timeopen) && $now < $aiassignment->timeopen) {
+    echo html_writer::tag('div',
+        '🔒 Esta tarea estará disponible el <strong>' . userdate($aiassignment->timeopen) . '</strong>',
+        ['class' => 'alert alert-warning', 'style' => 'margin-top:12px;']);
+}
+if (!empty($aiassignment->duedate)) {
+    $time_left = $aiassignment->duedate - $now;
+    if ($time_left > 0) {
+        $hours_left = floor($time_left / 3600);
+        $mins_left  = floor(($time_left % 3600) / 60);
+        $urgency_color = $time_left < 3600 ? '#dc3545' : ($time_left < 86400 ? '#856404' : '#155724');
+        $urgency_bg    = $time_left < 3600 ? '#fff5f5' : ($time_left < 86400 ? '#fff3cd' : '#d1e7dd');
+        if ($time_left < 3600) {
+            $time_str = "⚠️ ¡Solo quedan {$mins_left} minutos!";
+        } elseif ($time_left < 86400) {
+            $time_str = "⏰ Quedan {$hours_left}h {$mins_left}min";
+        } else {
+            $days_left = floor($time_left / 86400);
+            $time_str  = "📅 Quedan {$days_left} día(s)";
+        }
+        echo html_writer::tag('div',
+            $time_str . ' — Fecha límite: <strong>' . userdate($aiassignment->duedate) . '</strong>',
+            ['style' => "background:$urgency_bg;color:$urgency_color;border:1px solid currentColor;" .
+                        "border-radius:8px;padding:10px 14px;margin-top:8px;font-size:13px;font-weight:600;"]);
+    } else {
+        echo html_writer::tag('div',
+            '⛔ La fecha límite de entrega ya pasó (' . userdate($aiassignment->duedate) . '). No se aceptan más envíos.',
+            ['class' => 'alert alert-danger', 'style' => 'margin-top:8px;']);
+    }
+}
+
 // Vista para estudiantes
 if ($cansubmit && !$cangrade) {
     // Obtener envíos previos del usuario
@@ -227,25 +260,55 @@ if ($cansubmit && !$cangrade) {
         echo '<input type="hidden" name="sesskey" value="' . sesskey() . '">';
         echo '<input type="hidden" name="tab_switches" id="tab_switches_input" value="0">';
 
-        // ── Selector de lenguaje ──────────────────────────────────────
-        $lang_options = ['python' => 'Python', 'javascript' => 'JavaScript',
-                         'java' => 'Java', 'cpp' => 'C/C++', 'php' => 'PHP', 'plaintext' => 'Texto'];
-        $default_lang = $aiassignment->type === 'programming' ? 'python' : 'plaintext';
-        echo '<div style="margin-bottom:8px;display:flex;align-items:center;gap:12px;">';
-        echo '<label style="font-size:13px;font-weight:600;color:#555;">Lenguaje:</label>';
-        echo '<select id="lang-selector" style="padding:5px 10px;border-radius:6px;border:1px solid #dee2e6;font-size:13px;">';
+        // ── Selector de lenguaje (se bloquea si hay requerido) ────────
+        $lang_options = [
+            'python'     => '🐍 Python',
+            'javascript' => '🟨 JavaScript',
+            'java'       => '☕ Java',
+            'cpp'        => '⚙️ C/C++',
+            'php'        => '🐘 PHP',
+            'sql'        => '🗄️ SQL',
+            'typescript' => '🔷 TypeScript',
+            'ruby'       => '💎 Ruby',
+            'go'         => '🐹 Go',
+            'rust'       => '🦀 Rust',
+            'plaintext'  => '📄 Texto',
+        ];
+        // Si el profe fijó un lenguaje, ese es el default y se bloquea el selector
+        $req_lang    = trim($aiassignment->required_language ?? '');
+        $default_lang = !empty($req_lang) ? $req_lang
+                      : ($aiassignment->type === 'programming' ? 'python' : 'plaintext');
+        $lang_locked = !empty($req_lang);
+
+        echo '<div style="margin-bottom:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">';
+        echo '<label for="lang-selector" style="font-size:13px;font-weight:600;color:#555;">Lenguaje:</label>';
+        $sel_attrs = 'id="lang-selector" style="padding:5px 10px;border-radius:6px;border:1px solid #dee2e6;font-size:13px;"';
+        if ($lang_locked) {
+            $sel_attrs .= ' disabled title="El profesor ha fijado el lenguaje para esta tarea"';
+        }
+        echo "<select $sel_attrs>";
         foreach ($lang_options as $val => $label) {
             $sel = $val === $default_lang ? ' selected' : '';
             echo "<option value=\"$val\"$sel>$label</option>";
         }
         echo '</select>';
-        echo '<span style="font-size:12px;color:#888;">💡 El editor tiene resaltado de sintaxis</span>';
+        if ($lang_locked) {
+            echo '<span style="font-size:12px;color:#0c63e4;font-weight:600;">🔒 Lenguaje fijado por el profesor</span>';
+        } else {
+            echo '<span style="font-size:12px;color:#888;">💡 El editor tiene resaltado de sintaxis</span>';
+        }
         echo '</div>';
 
-        // ── Editor Monaco ─────────────────────────────────────────────
+        // ── Editor Monaco con fallback a textarea ─────────────────────
         echo '<div id="monaco-editor-container" style="width:100%;height:380px;border:1px solid #dee2e6;border-radius:8px;overflow:hidden;margin-bottom:8px;"></div>';
-        // Textarea oculto que se sincroniza con Monaco
-        echo '<textarea id="id_answer" name="answer" style="display:none;" required></textarea>';
+        // Textarea de fallback visible solo si Monaco no carga
+        echo '<textarea id="id_answer" name="answer" rows="16"
+            style="width:100%;font-family:monospace;font-size:13px;padding:10px;border:1px solid #dee2e6;
+                   border-radius:8px;display:none;box-sizing:border-box;resize:vertical;"
+            placeholder="Escribe tu código aquí..." required></textarea>';
+        echo '<div id="monaco-fallback-msg" style="display:none;color:#856404;font-size:12px;margin-bottom:6px;">
+            ⚠️ El editor avanzado no está disponible. Puedes escribir directamente en el área de texto.
+        </div>';
 
         echo '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
         echo '<span style="font-size:12px;color:#888;"><span id="char_counter">0</span> / 10000 ' . get_string('characters', 'aiassignment') . '</span>';
@@ -291,14 +354,80 @@ if ($cansubmit && !$cangrade) {
             });
         ' : '';
 
+        $req_lang_js   = json_encode($req_lang);
+        $lang_locked_js = $lang_locked ? 'true' : 'false';
         echo "
 <script>
 (function() {
+    var REQUIRED_LANG = $req_lang_js;
+    var LANG_LOCKED   = $lang_locked_js;
+    var monacoLoaded  = false;
+
     $exam_js
+
+    // ── Detección simple de lenguaje en el cliente ────────────────────
+    function detectLangClient(code) {
+        if (!code || code.length < 10) return '';
+        if (/\\bdef\\s+\\w+\\s*\\(|\\belif\\b|^import\\s+\\w|^from\\s+\\w+\\s+import/m.test(code)) return 'python';
+        if (/\\bpublic\\s+class\\b|\\bSystem\\.out\\.print|\\bimport\\s+java\\./m.test(code)) return 'java';
+        if (/\\bconsole\\.log\\b|\\bconst\\b|=>\\s*[{(]|\\brequire\\s*\\(/m.test(code)) return 'javascript';
+        if (/<\\?php|\\$[a-zA-Z_]\\w*\\s*=/m.test(code)) return 'php';
+        if (/\\b#include\\b|\\bprintf\\s*\\(|\\bint\\s+main\\s*\\(/m.test(code)) return 'cpp';
+        if (/\\bSELECT\\b.*\\bFROM\\b/im.test(code)) return 'sql';
+        if (/\\bfn\\s+\\w+\\s*\\(|\\blet\\s+mut\\b|println!/m.test(code)) return 'rust';
+        if (/\\bfunc\\s+\\w+\\s*\\(|\\bpackage\\s+main\\b/m.test(code)) return 'go';
+        return '';
+    }
+
+    var LANG_NAMES = {
+        python:'Python', javascript:'JavaScript', java:'Java',
+        cpp:'C/C++', php:'PHP', sql:'SQL', typescript:'TypeScript',
+        ruby:'Ruby', go:'Go', rust:'Rust'
+    };
+
+    function showLangWarning(detected) {
+        var el = document.getElementById('lang-warning-inline');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'lang-warning-inline';
+            el.style.cssText = 'background:#fff3cd;border:1px solid #ffc107;border-radius:6px;' +
+                'padding:8px 12px;font-size:13px;color:#856404;margin-bottom:8px;display:none;';
+            var btn = document.getElementById('submit-btn');
+            btn.parentNode.insertBefore(el, btn);
+        }
+        if (detected && REQUIRED_LANG && detected !== REQUIRED_LANG) {
+            el.innerHTML = '⚠️ Parece que estás escribiendo en <strong>' + (LANG_NAMES[detected]||detected) +
+                '</strong>, pero esta tarea requiere <strong>' + (LANG_NAMES[REQUIRED_LANG]||REQUIRED_LANG) + '</strong>.';
+            el.style.display = 'block';
+        } else {
+            el.style.display = 'none';
+        }
+    }
+
+    function syncAnswer(val) {
+        document.getElementById('id_answer').value = val;
+        document.getElementById('char_counter').textContent = val.length;
+        if (REQUIRED_LANG) showLangWarning(detectLangClient(val));
+    }
+
+    // ── Activar fallback textarea si Monaco no carga en 6s ───────────
+    var fallbackTimer = setTimeout(function() {
+        if (!monacoLoaded) {
+            document.getElementById('monaco-editor-container').style.display = 'none';
+            document.getElementById('id_answer').style.display = 'block';
+            document.getElementById('monaco-fallback-msg').style.display = 'block';
+            document.getElementById('id_answer').addEventListener('input', function() {
+                syncAnswer(this.value);
+            });
+        }
+    }, 6000);
 
     function initMonaco() {
         require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' }});
         require(['vs/editor/editor.main'], function() {
+            monacoLoaded = true;
+            clearTimeout(fallbackTimer);
+
             var editor = monaco.editor.create(document.getElementById('monaco-editor-container'), {
                 value: '',
                 language: '" . $default_lang . "',
@@ -315,36 +444,37 @@ if ($cansubmit && !$cangrade) {
                 suggestOnTriggerCharacters: true,
             });
 
-            // Sincronizar con textarea oculto
             editor.onDidChangeModelContent(function() {
-                var val = editor.getValue();
-                document.getElementById('id_answer').value = val;
-                document.getElementById('char_counter').textContent = val.length;
+                syncAnswer(editor.getValue());
             });
 
-            // Actualizar posición del cursor
             editor.onDidChangeCursorPosition(function(e) {
                 document.getElementById('line-counter').textContent =
                     'Línea ' + e.position.lineNumber + ', Col ' + e.position.column;
             });
 
-            // Cambiar lenguaje
-            document.getElementById('lang-selector').addEventListener('change', function() {
-                monaco.editor.setModelLanguage(editor.getModel(), this.value);
-            });
-
-            // Guardar referencia global
+            var selector = document.getElementById('lang-selector');
+            if (selector && !LANG_LOCKED) {
+                selector.addEventListener('change', function() {
+                    monaco.editor.setModelLanguage(editor.getModel(), this.value);
+                });
+            }
             window.monacoEditor = editor;
         });
     }
 
-    // Cargar Monaco loader
     var script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js';
+    script.src  = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js';
+    script.onerror = function() {
+        clearTimeout(fallbackTimer);
+        document.getElementById('monaco-editor-container').style.display = 'none';
+        document.getElementById('id_answer').style.display = 'block';
+        document.getElementById('monaco-fallback-msg').style.display = 'block';
+    };
     script.onload = initMonaco;
     document.head.appendChild(script);
 
-    // Validar antes de enviar
+    // ── Validar antes de enviar ───────────────────────────────────────
     document.getElementById('submission-form').addEventListener('submit', function(e) {
         var answer = document.getElementById('id_answer').value.trim();
         if (!answer) {
@@ -354,7 +484,7 @@ if ($cansubmit && !$cangrade) {
         }
         document.getElementById('submit-btn').disabled = true;
         document.getElementById('submit-btn').value = 'Enviando...';
-        document.getElementById('eval-spinner').style.display = 'inline';
+        document.getElementById('eval-spinner').style.display = 'block';
     });
 })();
 </script>
@@ -447,6 +577,27 @@ if ($cansubmit && !$cangrade) {
                      get_string('viewdetails', 'aiassignment') . '</a>';
             } else {
                 echo '<p><em>' . get_string('pendingevaluation', 'aiassignment') . '</em></p>';
+                // ── Polling para evaluación asíncrona: recargar automáticamente ─
+                echo html_writer::tag('div',
+                    '<span id="async-poll-msg">⏳ Esperando resultado de la evaluación...</span>',
+                    ['style' => 'font-size:12px;color:#6c757d;margin-top:4px;']);
+                echo "<script>
+(function() {
+    var sid = {$submission->id};
+    var interval = setInterval(function() {
+        fetch('plagiarism_ajax.php?action=check_evaluated&sid=' + sid)
+            .then(function(r){ return r.json(); })
+            .then(function(data) {
+                if (data.evaluated) {
+                    clearInterval(interval);
+                    document.getElementById('async-poll-msg').textContent =
+                        '✅ ¡Tu tarea fue evaluada! Calificación: ' + data.score + '%. Recargando...';
+                    setTimeout(function(){ location.reload(); }, 1500);
+                }
+            }).catch(function(){});
+    }, 8000); // revisar cada 8 segundos
+})();
+</script>";
             }
             echo '</div><hr>';
         }

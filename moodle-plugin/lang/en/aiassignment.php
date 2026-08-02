@@ -236,3 +236,13 @@ $string['wrong_language_unknown'] = '❌ This assignment requires {$a->required}
 // Shown in the assignment view (student hint)
 $string['language_required_hint'] = '🔤 Required language: <strong>{$a}</strong>';
 $string['language_any_hint']      = '🔤 Any programming language accepted';
+
+// ── Availability and deadline (v2.5.1) ───────────────────────────────────
+$string['timeopen']              = 'Open date';
+$string['timeopen_help']         = 'Date and time from which students can submit answers. Leave empty for immediate availability.';
+$string['duedate']               = 'Due date';
+$string['duedate_help']          = 'Deadline for submitting answers. After this date no new submissions will be accepted. Leave empty for no limit.';
+$string['pastduedate']           = '⛔ The submission deadline has passed. No more submissions are accepted.';
+$string['assignmentnotopen']     = '🔒 This assignment is not yet available.';
+$string['duedatesoon']           = '⚠️ Due date is soon: {$a}';
+$string['submissiondetectedlang']= 'Detected language';

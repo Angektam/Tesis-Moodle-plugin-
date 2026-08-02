@@ -49,6 +49,15 @@ $worst_score  = !empty($scores) ? round(min($scores), 1) : 0;
 $evaluated    = count(array_filter($submissions, fn($s) => $s->status === 'evaluated'));
 $pending      = $total_subs - $evaluated;
 
+// ── Promedio del grupo para comparación ──────────────────────
+$group_avg_sql = "SELECT AVG(s.score) as group_avg, COUNT(DISTINCT s.userid) as total_students
+                  FROM {aiassignment_submissions} s
+                  JOIN {aiassignment} a ON s.assignment = a.id
+                  WHERE a.course = :courseid AND s.score IS NOT NULL AND s.userid != :me";
+$group_stats = $DB->get_record_sql($group_avg_sql, ['courseid' => $course->id, 'me' => $USER->id]);
+$group_avg   = $group_stats && $group_stats->group_avg ? round($group_stats->group_avg, 1) : null;
+$group_total = $group_stats ? (int)$group_stats->total_students : 0;
+
 // Tendencia: comparar primer y último score
 $trend_text = '';
 $trend_color = '#555';
@@ -142,6 +151,19 @@ echo html_writer::start_div('stat-card ' . $pend_class);
 echo html_writer::tag('div', $pending, ['class' => 'stat-number']);
 echo html_writer::tag('div', 'Pendientes', ['class' => 'stat-label']);
 echo html_writer::end_div();
+
+// ── Tarjeta comparativa vs grupo ──────────────────────────────
+if ($group_avg !== null && !empty($scores)) {
+    $diff = round($avg_grade - $group_avg, 1);
+    $cmp_color = $diff >= 0 ? 'stat-card-success' : 'stat-card-warning';
+    $cmp_icon  = $diff >= 0 ? '📈' : '📉';
+    echo html_writer::start_div('stat-card ' . $cmp_color);
+    echo html_writer::tag('div',
+        ($diff >= 0 ? '+' : '') . $diff . '%',
+        ['class' => 'stat-number', 'title' => "Tu promedio vs grupo ($group_total alumnos)"]);
+    echo html_writer::tag('div', $cmp_icon . ' vs Grupo (' . $group_avg . '%)', ['class' => 'stat-label']);
+    echo html_writer::end_div();
+}
 
 echo html_writer::end_div(); // stats-cards-container
 

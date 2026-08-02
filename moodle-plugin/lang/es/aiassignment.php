@@ -301,3 +301,13 @@ $string['wrong_language_unknown'] = '❌ Esta tarea requiere {$a->required}. Ase
 // Pista mostrada al estudiante en la vista de la tarea
 $string['language_required_hint'] = '🔤 Lenguaje requerido: <strong>{$a}</strong>';
 $string['language_any_hint']      = '🔤 Se acepta cualquier lenguaje de programación';
+
+// ── Disponibilidad y deadline (v2.5.1) ───────────────────────────────────
+$string['timeopen']              = 'Fecha de apertura';
+$string['timeopen_help']         = 'Fecha y hora a partir de la cual los estudiantes pueden enviar respuestas. Deja vacío para disponibilidad inmediata.';
+$string['duedate']               = 'Fecha límite de entrega';
+$string['duedate_help']          = 'Fecha y hora límite para enviar respuestas. Después de esta fecha no se aceptarán nuevos envíos. Deja vacío para sin límite.';
+$string['pastduedate']           = '⛔ La fecha límite de entrega ya pasó. No se aceptan más envíos.';
+$string['assignmentnotopen']     = '🔒 Esta tarea aún no está disponible.';
+$string['duedatesoon']           = '⚠️ La fecha límite es pronto: {$a}';
+$string['submissiondetectedlang']= 'Lenguaje detectado';

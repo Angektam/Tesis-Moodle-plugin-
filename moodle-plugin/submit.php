@@ -14,6 +14,20 @@ $aiassignment = $DB->get_record('aiassignment', array('id' => $cm->instance), '*
 require_login($course, true, $cm);
 require_sesskey();
 
+// Verificar fecha de apertura
+if (!empty($aiassignment->timeopen) && time() < $aiassignment->timeopen) {
+    redirect(new moodle_url('/mod/aiassignment/view.php', ['id' => $cm->id]),
+        '🔒 Esta tarea aún no está disponible. Abre el ' . userdate($aiassignment->timeopen),
+        null, \core\output\notification::NOTIFY_WARNING);
+}
+
+// Verificar fecha límite
+if (!empty($aiassignment->duedate) && time() > $aiassignment->duedate) {
+    redirect(new moodle_url('/mod/aiassignment/view.php', ['id' => $cm->id]),
+        get_string('pastduedate', 'aiassignment'),
+        null, \core\output\notification::NOTIFY_ERROR);
+}
+
 $context = context_module::instance($cm->id);
 require_capability('mod/aiassignment:submit', $context);
 
@@ -66,25 +80,6 @@ if (!empty($required_lang) && in_array($aiassignment->type, ['programming', 'deb
             new moodle_url('/mod/aiassignment/view.php', ['id' => $cm->id]),
             get_string('wrong_language', 'aiassignment', [
                 'required' => $required_label,
-                'detected' => $detected_label,
-            ]),
-            null,
-            \core\output\notification::NOTIFY_ERROR
-        );
-    }
-}
-
-// 2b. Validar lenguaje de programación requerido por el maestro
-$required_lang = trim($aiassignment->required_language ?? '');
-if (!empty($required_lang) && in_array($aiassignment->type, ['programming', 'debugging', 'sql'])) {
-    $detected_lang = \mod_aiassignment\language_validator::detect($answer);
-    if (!empty($detected_lang) && $detected_lang !== $required_lang) {
-        $lang_label = \mod_aiassignment\language_validator::label($required_lang);
-        $detected_label = \mod_aiassignment\language_validator::label($detected_lang);
-        redirect(
-            new moodle_url('/mod/aiassignment/view.php', ['id' => $cm->id]),
-            get_string('wrong_language', 'aiassignment', [
-                'required' => $lang_label,
                 'detected' => $detected_label,
             ]),
             null,
@@ -148,7 +143,7 @@ $event->trigger();
 if ($aiassignment->type === 'programming') {
     try {
         $ai_detection = \mod_aiassignment\ai_detector::detect($answer, $aiassignment->type);
-        if ($ai_detection['score'] >= 70) {
+        if ($ai_detection['score'] >= 85) {  // umbral subido de 70 → 85
             // Guardar señal en el feedback para que el profesor la vea
             $submission->feedback = '[⚠️ POSIBLE IA: ' . $ai_detection['label'] . ' (' .
                 $ai_detection['score'] . '%)] ' . implode('; ', $ai_detection['signals']);

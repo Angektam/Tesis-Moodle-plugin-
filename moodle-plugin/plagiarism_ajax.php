@@ -8,6 +8,25 @@ require_once('../../config.php');
 require_once('lib.php');
 require_once(__DIR__ . '/classes/plagiarism_detector.php');
 
+// ── Endpoint especial: check_evaluated (polling de evaluación asíncrona) ──
+$action = optional_param('action', '', PARAM_ALPHA);
+if ($action === 'check_evaluated') {
+    $sid = required_param('sid', PARAM_INT);
+    require_login();
+    header('Content-Type: application/json; charset=utf-8');
+    $sub = $DB->get_record('aiassignment_submissions', ['id' => $sid, 'userid' => $USER->id]);
+    if (!$sub) {
+        echo json_encode(['evaluated' => false]);
+        exit;
+    }
+    if ($sub->status === 'evaluated' && $sub->score !== null) {
+        echo json_encode(['evaluated' => true, 'score' => round($sub->score, 1)]);
+    } else {
+        echo json_encode(['evaluated' => false]);
+    }
+    exit;
+}
+
 $id     = required_param('id',     PARAM_INT);
 $nosem  = optional_param('nosem',  1, PARAM_INT);
 $force  = optional_param('force',  0, PARAM_INT);

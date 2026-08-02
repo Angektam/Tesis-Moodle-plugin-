@@ -156,5 +156,30 @@ function xmldb_aiassignment_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026042800, 'aiassignment');
     }
 
+    if ($oldversion < 2026062601) {
+        // v2.5.0: Agregar campo required_language a aiassignment
+        // Permite al maestro especificar qué lenguaje deben usar los estudiantes.
+        $table = new xmldb_table('aiassignment');
+        $field = new xmldb_field('required_language', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, '');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_mod_savepoint(true, 2026062601, 'aiassignment');
+    }
+
+    if ($oldversion < 2026080101) {
+        // v2.5.1: Agregar duedate y timeopen a aiassignment
+        $table = new xmldb_table('aiassignment');
+        $field_due = new xmldb_field('duedate', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        if (!$dbman->field_exists($table, $field_due)) {
+            $dbman->add_field($table, $field_due);
+        }
+        $field_open = new xmldb_field('timeopen', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        if (!$dbman->field_exists($table, $field_open)) {
+            $dbman->add_field($table, $field_open);
+        }
+        upgrade_mod_savepoint(true, 2026080101, 'aiassignment');
+    }
+
     return true;
 }

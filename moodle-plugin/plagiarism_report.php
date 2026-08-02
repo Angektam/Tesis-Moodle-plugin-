@@ -24,7 +24,7 @@ $PAGE->set_heading(format_string($course->fullname));
 $PAGE->set_context($context);
 
 // ── Exportar CSV ──────────────────────────────────────────────────────────
-if ($export) {
+if ($export == 1) {
     require_sesskey();
     $report = \mod_aiassignment\plagiarism_detector::generate_plagiarism_report(
         $aiassignment->id, true, false
@@ -54,6 +54,51 @@ if ($export) {
     }
 }
 
+// ── Exportar HTML imprimible (evidencia PDF) ──────────────────────────────
+if ($export == 2) {
+    require_sesskey();
+    $report = \mod_aiassignment\plagiarism_detector::generate_plagiarism_report(
+        $aiassignment->id, true, false
+    );
+    if (!isset($report['message'])) {
+        header('Content-Type: text/html; charset=utf-8');
+        echo '<!DOCTYPE html><html><head><meta charset="utf-8">
+        <title>Reporte de Plagio — ' . s($aiassignment->name) . '</title>
+        <style>
+            body{font-family:Arial,sans-serif;font-size:12px;color:#222;padding:20px;}
+            h1{font-size:16px;border-bottom:2px solid #333;padding-bottom:6px;}
+            table{width:100%;border-collapse:collapse;margin-top:10px;}
+            th{background:#2563eb;color:#fff;padding:6px 8px;text-align:left;font-size:11px;}
+            td{padding:5px 8px;border-bottom:1px solid #ddd;font-size:11px;}
+            tr.high td{background:#fef2f2;} tr.medium td{background:#fefce8;}
+            .badge-danger{color:#dc3545;font-weight:700;} .badge-warning{color:#856404;font-weight:700;}
+            @media print{button{display:none!important;}}
+        </style></head><body>';
+        echo '<button onclick="window.print()" style="margin-bottom:12px;padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;">🖨️ Imprimir / Guardar como PDF</button>';
+        echo '<h1>🔍 Reporte de Plagio — ' . s($aiassignment->name) . '</h1>';
+        echo '<p>Generado: ' . date('d/M/Y H:i') . ' | Total comparaciones: ' . ($report['total_comparisons'] ?? 0) .
+             ' | Pares sospechosos: ' . ($report['suspicious_pairs_count'] ?? 0) . '</p>';
+        echo '<table><thead><tr>
+            <th>#</th><th>Alumno 1</th><th>Alumno 2</th><th>Similitud</th>
+            <th>Veredicto</th><th>Técnicas detectadas</th>
+        </tr></thead><tbody>';
+        $i = 1;
+        foreach ($report['detailed_comparisons'] as $cmp) {
+            $u1  = $DB->get_record('user', ['id' => $cmp['submission1_user']]);
+            $u2  = $DB->get_record('user', ['id' => $cmp['submission2_user']]);
+            $pct = round($cmp['similarity_score'], 1);
+            $cls = $pct >= 75 ? 'high' : ($pct >= 50 ? 'medium' : '');
+            $vcls = $pct >= 75 ? 'badge-danger' : 'badge-warning';
+            echo "<tr class=\"$cls\"><td>$i</td><td>" . fullname($u1) . "</td><td>" . fullname($u2) .
+                 "</td><td class=\"$vcls\">{$pct}%</td><td>" . htmlspecialchars($cmp['verdict']) .
+                 "</td><td>" . htmlspecialchars(implode(', ', $cmp['techniques'] ?? [])) . "</td></tr>";
+            $i++;
+        }
+        echo '</tbody></table></body></html>';
+        exit;
+    }
+}
+
 $PAGE->requires->css('/mod/aiassignment/styles/dashboard.css');
 echo $OUTPUT->header();
 
@@ -64,6 +109,8 @@ $ajax_full = new moodle_url('/mod/aiassignment/plagiarism_ajax.php',
     ['id' => $cm->id, 'nosem' => 0, 'force' => 1]);
 $csv_url   = new moodle_url('/mod/aiassignment/plagiarism_report.php',
     ['id' => $cm->id, 'export' => 1, 'sesskey' => sesskey()]);
+$print_url = new moodle_url('/mod/aiassignment/plagiarism_report.php',
+    ['id' => $cm->id, 'export' => 2, 'sesskey' => sesskey()]);
 
 // Contar alumnos para estimación de tiempo
 $nsubs = $DB->count_records_sql(
@@ -90,7 +137,9 @@ echo html_writer::tag('button', '🧠 Análisis Completo con IA (~' . $est_full 
     ['id' => 'btn-full', 'class' => 'btn btn-danger',
      'onclick' => 'startAnalysis(0)',
      'title' => 'Con OpenAI — detecta también reescrituras lógicas.']);
-echo html_writer::link($back_url, '← Volver a envíos', ['class' => 'btn btn-secondary']);
+echo html_writer::link($csv_url,   '📥 Exportar CSV',           ['class' => 'btn btn-outline-secondary']);
+echo html_writer::link($print_url, '🖨️ Exportar PDF/Imprimir',  ['class' => 'btn btn-outline-secondary', 'target' => '_blank']);
+echo html_writer::link($back_url,  '← Volver a envíos',         ['class' => 'btn btn-secondary']);
 echo html_writer::end_div();
 
 // ── Área de progreso ──────────────────────────────────────────────────────

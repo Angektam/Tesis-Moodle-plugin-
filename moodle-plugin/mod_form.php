@@ -51,6 +51,30 @@ class mod_aiassignment_mod_form extends moodleform_mod {
         $mform->addRule('type', null, 'required', null, 'client');
         $mform->addHelpButton('type', 'problemtype', 'aiassignment');
 
+        // ── Lenguaje de programación requerido ────────────────────────
+        $languages = array(
+            ''           => get_string('lang_any', 'aiassignment'),
+            'python'     => '🐍 Python',
+            'javascript' => '🟨 JavaScript',
+            'java'       => '☕ Java',
+            'cpp'        => '⚙️ C / C++',
+            'php'        => '🐘 PHP',
+            'sql'        => '🗄️ SQL',
+            'typescript' => '🔷 TypeScript',
+            'ruby'       => '💎 Ruby',
+            'go'         => '🐹 Go',
+            'rust'       => '🦀 Rust',
+            'pseudocode' => '📋 Pseudocódigo (cualquier sintaxis)',
+        );
+        $mform->addElement('select', 'required_language', get_string('required_language', 'aiassignment'), $languages);
+        $mform->setType('required_language', PARAM_ALPHANUMEXT);
+        $mform->setDefault('required_language', '');
+        $mform->addHelpButton('required_language', 'required_language', 'aiassignment');
+        // Solo visible cuando el tipo es programming o debugging
+        $mform->hideIf('required_language', 'type', 'eq', 'math');
+        $mform->hideIf('required_language', 'type', 'eq', 'essay');
+        $mform->hideIf('required_language', 'type', 'eq', 'pseudocode');
+
         // Solución de referencia
         $mform->addElement('textarea', 'solution', get_string('solution', 'aiassignment'),
             'wrap="virtual" rows="10" cols="80"');
@@ -81,6 +105,19 @@ class mod_aiassignment_mod_form extends moodleform_mod {
         $mform->setDefault('maxattempts', 0);
         $mform->addRule('maxattempts', null, 'numeric', null, 'client');
         $mform->addHelpButton('maxattempts', 'maxattempts', 'aiassignment');
+
+        // ── Disponibilidad y fecha límite ─────────────────────────
+        $mform->addElement('header', 'availabilitysettings', '📅 Disponibilidad');
+
+        $mform->addElement('date_time_selector', 'timeopen', 'Fecha de apertura',
+            ['optional' => true]);
+        $mform->setDefault('timeopen', 0);
+        $mform->addHelpButton('timeopen', 'timeopen', 'aiassignment');
+
+        $mform->addElement('date_time_selector', 'duedate', 'Fecha límite de entrega',
+            ['optional' => true]);
+        $mform->setDefault('duedate', 0);
+        $mform->addHelpButton('duedate', 'duedate', 'aiassignment');
 
         // ── Rúbrica personalizable ────────────────────────────────────
         $mform->addElement('header', 'rubricsettings', '📋 Rúbrica de evaluación (opcional)');

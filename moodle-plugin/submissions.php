@@ -92,17 +92,41 @@ $table->head = array(
     get_string('student', 'aiassignment'),
     get_string('submitted', 'aiassignment'),
     get_string('attempt', 'aiassignment'),
+    '🔤 Lenguaje',
     get_string('status', 'aiassignment'),
     get_string('score', 'aiassignment'),
     '🔍 Plagio',
     get_string('actions', 'aiassignment')
 );
-$table->align = array('center', 'left', 'left', 'center', 'center', 'center', 'center', 'center');
+$table->align = array('center', 'left', 'left', 'center', 'center', 'center', 'center', 'center', 'center');
 
 foreach ($submissions_paged as $submission) {
     $student  = fullname($submission);
     $submitted = userdate($submission->timecreated);
     $attempt  = $submission->attempt;
+
+    // Detectar lenguaje del envío
+    $detected_lang = '';
+    if (!empty($submission->answer) && in_array($aiassignment->type, ['programming', 'debugging', 'sql'])) {
+        $lang_key = \mod_aiassignment\security::detect_language($submission->answer);
+        $lang_labels_map = [
+            'python' => '🐍 Python', 'javascript' => '🟨 JS', 'java' => '☕ Java',
+            'cpp' => '⚙️ C/C++', 'php' => '🐘 PHP', 'sql' => '🗄️ SQL',
+            'typescript' => '🔷 TS', 'ruby' => '💎 Ruby', 'go' => '🐹 Go', 'rust' => '🦀 Rust',
+        ];
+        $detected_lang = isset($lang_labels_map[$lang_key])
+            ? html_writer::tag('span', $lang_labels_map[$lang_key],
+                ['style' => 'font-size:11px;background:#e9ecef;padding:2px 6px;border-radius:10px;'])
+            : html_writer::tag('span', '—', ['style' => 'color:#bbb;']);
+
+        // Marcar en rojo si no coincide con el requerido
+        $req = trim($aiassignment->required_language ?? '');
+        if (!empty($req) && !empty($lang_key) && $lang_key !== $req) {
+            $detected_lang = html_writer::tag('span', $lang_labels_map[$lang_key] ?? $lang_key,
+                ['style' => 'font-size:11px;background:#f8d7da;color:#842029;padding:2px 6px;border-radius:10px;font-weight:600;',
+                 'title' => 'Lenguaje incorrecto — se requería ' . ($lang_labels_map[$req] ?? $req)]);
+        }
+    }
 
     // Estado
     if ($submission->status == 'evaluated') {
@@ -161,7 +185,7 @@ foreach ($submissions_paged as $submission) {
         ['id' => $cm->id, 'nosem' => 1]);
     $actions .= ' ' . $resubmit_btn;
 
-    $table->data[] = array($checkbox, $student, $submitted, $attempt, $status, $score, $plagiarism_pct, $actions);
+    $table->data[] = array($checkbox, $student, $submitted, $attempt, $detected_lang, $status, $score, $plagiarism_pct, $actions);
 }
 
 // Filtro de estado server-side (mejora #9) y búsqueda
