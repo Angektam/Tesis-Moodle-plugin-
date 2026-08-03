@@ -97,6 +97,73 @@ if (in_array($aiassignment->type, ['programming', 'debugging', 'sql'])) {
     }
 }
 
+// ── Mostrar deadline y tiempo restante ───────────────────────────────────
+$now = time();
+if (!empty($aiassignment->timeopen) && $now < $aiassignment->timeopen) {
+    // Aún no abre
+    echo '<div class="alert alert-warning" role="alert" style="font-size:13px;margin-bottom:10px;">' .
+         get_string('assignmentnotopen', 'aiassignment', userdate($aiassignment->timeopen)) .
+         '</div>';
+} elseif (!empty($aiassignment->duedate)) {
+    if ($now > $aiassignment->duedate) {
+        // Cerrada
+        echo '<div class="alert alert-danger" role="alert" style="font-size:13px;margin-bottom:10px;">' .
+             get_string('assignmentclosed', 'aiassignment', userdate($aiassignment->duedate)) .
+             '</div>';
+    } else {
+        // Abierta — mostrar cuenta regresiva
+        $remaining = $aiassignment->duedate - $now;
+        if ($remaining < 3600) {
+            $time_str = round($remaining / 60) . ' minutos';
+            $urgency  = 'alert-danger';
+        } elseif ($remaining < 86400) {
+            $time_str = round($remaining / 3600) . ' horas';
+            $urgency  = 'alert-warning';
+        } else {
+            $time_str = round($remaining / 86400) . ' días';
+            $urgency  = 'alert-info';
+        }
+        echo '<div class="alert ' . $urgency . '" id="deadline-banner" role="timer" ' .
+             'style="font-size:13px;margin-bottom:10px;" ' .
+             'data-deadline="' . $aiassignment->duedate . '">' .
+             '⏱️ Fecha límite: <strong>' . userdate($aiassignment->duedate) . '</strong> ' .
+             '(<span id="time-remaining">' . s($time_str) . '</span> restantes)' .
+             '</div>';
+        // Script de cuenta regresiva en tiempo real
+        echo '<script>
+(function(){
+    var deadline = ' . (int)$aiassignment->duedate . ';
+    function updateTimer() {
+        var rem = deadline - Math.floor(Date.now()/1000);
+        if (rem <= 0) {
+            document.getElementById("deadline-banner").className = "alert alert-danger";
+            document.getElementById("time-remaining").textContent = "VENCIDA";
+            var btn = document.getElementById("submit-btn");
+            if (btn) { btn.disabled = true; btn.title = "Fecha límite vencida"; }
+            return;
+        }
+        var d = Math.floor(rem/86400), h = Math.floor((rem%86400)/3600),
+            m = Math.floor((rem%3600)/60), s = rem%60;
+        var parts = [];
+        if (d > 0) parts.push(d + "d");
+        if (h > 0) parts.push(h + "h");
+        if (m > 0) parts.push(m + "m");
+        parts.push(s + "s");
+        var el = document.getElementById("time-remaining");
+        if (el) el.textContent = parts.join(" ");
+        if (rem < 3600) {
+            document.getElementById("deadline-banner").className = "alert alert-danger";
+        } else if (rem < 86400) {
+            document.getElementById("deadline-banner").className = "alert alert-warning";
+        }
+        setTimeout(updateTimer, 1000);
+    }
+    updateTimer();
+})();
+</script>';
+    }
+}
+
 if ($aiassignment->documentation) {
     echo '<div class="documentation">';
     echo '<h4>' . get_string('documentation', 'aiassignment') . '</h4>';

@@ -31,6 +31,8 @@
         <FIELD NAME="rubric_documentacion" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="20" SEQUENCE="false"/>
         <FIELD NAME="required_language" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="" SEQUENCE="false" COMMENT="Required programming language: python|javascript|java|cpp|php|sql|typescript|ruby|go|rust|pseudocode|empty=any"/>
         <FIELD NAME="exam_mode_local" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="1 = exam mode for this assignment"/>
+        <FIELD NAME="duedate"  TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Unix timestamp deadline; 0 = no deadline"/>
+        <FIELD NAME="timeopen" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Unix timestamp when assignment opens; 0 = always open"/>
         <FIELD NAME="timecreated"  TYPE="int"  LENGTH="10"  NOTNULL="true"  DEFAULT="0"    SEQUENCE="false"/>
         <FIELD NAME="timemodified" TYPE="int"  LENGTH="10"  NOTNULL="true"  DEFAULT="0"    SEQUENCE="false"/>
         <FIELD NAME="duedate" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Unix timestamp deadline. 0 = no deadline"/>

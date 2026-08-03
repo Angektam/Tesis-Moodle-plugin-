@@ -24,7 +24,7 @@ if (!empty($aiassignment->timeopen) && time() < $aiassignment->timeopen) {
 // Verificar fecha límite
 if (!empty($aiassignment->duedate) && time() > $aiassignment->duedate) {
     redirect(new moodle_url('/mod/aiassignment/view.php', ['id' => $cm->id]),
-        get_string('pastduedate', 'aiassignment'),
+        get_string('assignmentclosed', 'aiassignment', userdate($aiassignment->duedate)),
         null, \core\output\notification::NOTIFY_ERROR);
 }
 

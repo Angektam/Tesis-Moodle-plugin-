@@ -36,7 +36,18 @@ class mod_aiassignment_mod_form extends moodleform_mod {
 
         // Tipo de problema
         $mform->addElement('header', 'problemsettings', get_string('problemsettings', 'aiassignment'));
-        
+
+        // ── Fecha de disponibilidad y cierre ──────────────────────────────
+        $mform->addElement('date_time_selector', 'timeopen',
+            get_string('timeopen', 'aiassignment'), ['optional' => true]);
+        $mform->setDefault('timeopen', 0);
+        $mform->addHelpButton('timeopen', 'timeopen', 'aiassignment');
+
+        $mform->addElement('date_time_selector', 'duedate',
+            get_string('duedate', 'aiassignment'), ['optional' => true]);
+        $mform->setDefault('duedate', 0);
+        $mform->addHelpButton('duedate', 'duedate', 'aiassignment');
+
         $types = array(
             'math'        => '📐 ' . get_string('math', 'aiassignment'),
             'programming' => '💻 ' . get_string('programming', 'aiassignment'),
@@ -180,6 +191,11 @@ class mod_aiassignment_mod_form extends moodleform_mod {
         // Validar intentos máximos (entero >= 0).
         if ($data['maxattempts'] !== '' && isset($data['maxattempts']) && $data['maxattempts'] < 0) {
             $errors['maxattempts'] = get_string('err_numeric', 'form');
+        }
+
+        // Validar que duedate sea posterior a timeopen si ambos están definidos.
+        if (!empty($data['duedate']) && !empty($data['timeopen']) && $data['duedate'] <= $data['timeopen']) {
+            $errors['duedate'] = get_string('duedatebeforetimeopen', 'aiassignment');
         }
 
         return $errors;

@@ -237,6 +237,19 @@ $string['wrong_language_unknown'] = '❌ This assignment requires {$a->required}
 $string['language_required_hint'] = '🔤 Required language: <strong>{$a}</strong>';
 $string['language_any_hint']      = '🔤 Any programming language accepted';
 
+// ── Deadline (v2.5.1) ─────────────────────────────────────────────────────
+$string['duedate']                = 'Due date';
+$string['duedate_help']           = 'Date and time after which no more submissions are accepted. Leave empty for no deadline.';
+$string['timeopen']               = 'Available from';
+$string['timeopen_help']          = 'Date and time from which students can view and submit the assignment. Leave empty to make it available immediately.';
+$string['duedatebeforetimeopen']  = 'The due date must be after the open date.';
+$string['assignmentclosed']       = '🔒 This assignment closed on {$a}. No more submissions are accepted.';
+$string['assignmentnotopen']      = '⏳ This assignment will be available from {$a}.';
+$string['duedatesoon']            = '⚠️ Due date: {$a}';
+$string['duedatepassed']          = '🔴 Due date passed: {$a}';
+$string['timeremaining']          = '⏱️ Time remaining: {$a}';
+$string['detected_language']      = 'Detected language: {$a}';
+
 // ── Availability and deadline (v2.5.1) ───────────────────────────────────
 $string['timeopen']              = 'Open date';
 $string['timeopen_help']         = 'Date and time from which students can submit answers. Leave empty for immediate availability.';

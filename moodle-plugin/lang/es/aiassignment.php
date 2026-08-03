@@ -302,6 +302,19 @@ $string['wrong_language_unknown'] = '❌ Esta tarea requiere {$a->required}. Ase
 $string['language_required_hint'] = '🔤 Lenguaje requerido: <strong>{$a}</strong>';
 $string['language_any_hint']      = '🔤 Se acepta cualquier lenguaje de programación';
 
+// ── Fecha límite (v2.5.1) ─────────────────────────────────────────────────
+$string['duedate']                = 'Fecha límite de entrega';
+$string['duedate_help']           = 'Fecha y hora máxima para enviar la tarea. Después de este momento no se aceptarán nuevos envíos. Deja vacío para sin fecha límite.';
+$string['timeopen']               = 'Disponible desde';
+$string['timeopen_help']          = 'Fecha y hora desde la cual los estudiantes pueden ver y enviar la tarea. Deja vacío para disponible de inmediato.';
+$string['duedatebeforetimeopen']  = 'La fecha límite debe ser posterior a la fecha de apertura.';
+$string['assignmentclosed']       = '🔒 Esta tarea cerró el {$a}. No se aceptan más envíos.';
+$string['assignmentnotopen']      = '⏳ Esta tarea estará disponible desde el {$a}.';
+$string['duedatesoon']            = '⚠️ Fecha límite: {$a}';
+$string['duedatepassed']          = '🔴 Fecha límite vencida: {$a}';
+$string['timeremaining']          = '⏱️ Tiempo restante: {$a}';
+$string['detected_language']      = 'Lenguaje detectado: {$a}';
+
 // ── Disponibilidad y deadline (v2.5.1) ───────────────────────────────────
 $string['timeopen']              = 'Fecha de apertura';
 $string['timeopen_help']         = 'Fecha y hora a partir de la cual los estudiantes pueden enviar respuestas. Deja vacío para disponibilidad inmediata.';

@@ -181,5 +181,17 @@ function xmldb_aiassignment_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026080101, 'aiassignment');
     }
 
+    if ($oldversion < 2026080201) {
+        // v2.5.1: Mejoras completadas
+        // - duedate / timeopen ya se agregaron en 2026080101
+        // - Forzar lenguaje en editor (validación JS + PHP en submit)
+        // - Columna lenguaje detectado en submissions.php
+        // - Cuenta regresiva en tiempo real en view.php
+        // - Fallback textarea si Monaco no carga
+        // - Corrección de string 'pastduedate' → 'assignmentclosed'
+        // - ai_detector: ajuste de umbral a 75% (reduce falsos positivos)
+        upgrade_mod_savepoint(true, 2026080201, 'aiassignment');
+    }
+
     return true;
 }
