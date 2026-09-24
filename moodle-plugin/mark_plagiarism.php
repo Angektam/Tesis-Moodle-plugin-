@@ -66,6 +66,21 @@ if ($status === 'confirmed') {
         $USER->id, $submissionid, 'submission',
         ['assignment' => $aiassignment->name, 'student_id' => $submission->userid]
     );
+
+    // ── Descuento automático de nota por plagio confirmado ────────────────────
+    $discount_pct = (int)(get_config('mod_aiassignment', 'plagiarism_grade_penalty') ?: 0);
+    if ($discount_pct > 0 && $submission->score !== null) {
+        $new_score = max(0, round($submission->score * (1 - $discount_pct / 100), 2));
+        $DB->set_field('aiassignment_submissions', 'score', $new_score, ['id' => $submission->id]);
+        $DB->set_field('aiassignment_submissions', 'feedback',
+            ($submission->feedback ?? '') . ' [🚫 Descuento ' . $discount_pct . '% por plagio confirmado]',
+            ['id' => $submission->id]);
+        // Actualizar libro de calificaciones
+        $aiassignment_rec = $DB->get_record('aiassignment', ['id' => $submission->assignment]);
+        if ($aiassignment_rec) {
+            aiassignment_update_grades($aiassignment_rec, $submission->userid);
+        }
+    }
 } else {
     // Registrar descarte en auditoría
     \mod_aiassignment\audit_logger::log(

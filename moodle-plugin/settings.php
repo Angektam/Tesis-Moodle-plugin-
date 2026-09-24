@@ -54,6 +54,14 @@ if ($ADMIN->fulltree) {
         PARAM_INT
     ));
 
+    $settings->add(new admin_setting_configtext(
+        'mod_aiassignment/plagiarism_grade_penalty',
+        'Descuento de nota por plagio confirmado (%)',
+        'Porcentaje de descuento aplicado automáticamente cuando un profesor confirma plagio. 0 = sin descuento automático.',
+        '0',
+        PARAM_INT
+    ));
+
     // OpenAI retries
     $settings->add(new admin_setting_configtext(
         'mod_aiassignment/openai_retries',

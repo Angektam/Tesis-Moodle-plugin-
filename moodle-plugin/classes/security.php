@@ -335,13 +335,25 @@ class security {
         }
         if ($py >= 2) return 'python';
 
-        // TypeScript: tipos explícitos con :, import/export ES6, interface, enum
+        // TypeScript: detectar ANTES que JavaScript (señales más específicas)
+        // Requiere 3+ señales para evitar confusión con JS moderno
         $ts = 0;
-        foreach (['/:\s*(string|number|boolean|void|any|unknown)\b/', '/\binterface\s+\w+\s*{/',
-                  '/\benum\s+\w+\s*{/', '/\bimport\s+.*\s+from\s+[\'"]/', '/\bexport\s+(default\s+)?class\b/'] as $p) {
+        foreach ([
+            '/:\s*(string|number|boolean|void|any|unknown|never|object)\b/',  // type annotations
+            '/\binterface\s+\w+\s*\{/',                                         // interface declarations
+            '/\benum\s+\w+\s*\{/',                                              // enum declarations
+            '/\btype\s+\w+\s*=\s*[^=]/',                                       // type aliases
+            '/\bas\s+(string|number|boolean|any|\w+)\b/',                       // type casting
+            '/\bReadonly<|Partial<|Required<|Record</',                         // utility types
+            '/\.tsx?\b/',                                                        // .ts/.tsx file hints
+        ] as $p) {
             if (preg_match($p, $code)) $ts++;
         }
-        if ($ts >= 2) return 'typescript';
+        if ($ts >= 3) return 'typescript';
+        // Si tiene 1-2 señales TS + señales JS, es probablemente TypeScript
+        if ($ts >= 1 && preg_match('/\bconst\b|\blet\b/', $code) && preg_match('/:\s*\w+[,);>]/', $code)) {
+            return 'typescript';
+        }
 
         // Java: public class, System.out, import java., tipos primitivos con mayúscula
         $java = 0;

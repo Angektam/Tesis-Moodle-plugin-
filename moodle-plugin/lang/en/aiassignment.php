@@ -259,3 +259,13 @@ $string['pastduedate']           = '⛔ The submission deadline has passed. No m
 $string['assignmentnotopen']     = '🔒 This assignment is not yet available.';
 $string['duedatesoon']           = '⚠️ Due date is soon: {$a}';
 $string['submissiondetectedlang']= 'Detected language';
+
+// ── v2.5.2 ────────────────────────────────────────────────────────────────
+$string['lang_incompatible_type'] = 'Required language does not apply to this problem type.';
+$string['diff_view']              = '🔍 Diff view';
+$string['diff_added']             = 'Lines only in reference solution';
+$string['diff_removed']           = 'Lines only in student answer';
+$string['diff_unchanged']         = 'Lines in common';
+$string['lang_distribution']      = '🔤 Language distribution';
+$string['plagiarism_webhook_sent']= 'Plagiarism alert sent to webhook.';
+$string['no_tests_found']         = 'This assignment has no test cases configured.';

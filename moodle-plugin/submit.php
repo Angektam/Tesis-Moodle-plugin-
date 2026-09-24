@@ -237,6 +237,20 @@ if ($async_mode) {
         $evalrecord->timecreated      = time();
         $DB->insert_record('aiassignment_evaluations', $evalrecord);
 
+        // ── Notificación webhook si plagio supera umbral ──────────────────────────
+        try {
+            $threshold = (int)(get_config('mod_aiassignment', 'plagiarism_threshold') ?: 75);
+            // Ejecutar detección rápida (sin IA) para alertas en tiempo real
+            $plag_quick = \mod_aiassignment\plagiarism_detector::detect_plagiarism($submission->id);
+            if (!empty($plag_quick['has_plagiarism']) && ($plag_quick['highest_similarity'] ?? 0) >= $threshold) {
+                \mod_aiassignment\webhook_notifier::send_plagiarism_alert(
+                    $plag_quick, $course, $aiassignment
+                );
+            }
+        } catch (\Exception $e) {
+            debugging('Webhook notification failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        }
+
         // Actualizar submission
         $submission->status       = 'evaluated';
         $submission->score        = $evaluation['similarity_score'];

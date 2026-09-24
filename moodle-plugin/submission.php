@@ -65,13 +65,21 @@ echo html_writer::tag('pre',
 );
 echo $OUTPUT->box_end();
 
-// Comparación lado a lado (solo profesores)
+// Comparación lado a lado con DIFF visual (solo profesores)
 if ($cangrade) {
     echo $OUTPUT->box_start('generalbox');
     echo html_writer::tag('h3', '🔍 Comparación con Solución de Referencia');
+
+    // ── Tabs: Lado a lado | Diff ──────────────────────────────────────────
+    echo '<div style="display:flex;gap:8px;margin-bottom:12px;">';
+    echo '<button id="tab-side" onclick="showTab(\'side\')" class="btn btn-sm btn-primary" type="button">⬛ Lado a lado</button>';
+    echo '<button id="tab-diff" onclick="showTab(\'diff\')" class="btn btn-sm btn-outline-secondary" type="button">🔍 Vista diff</button>';
+    echo '</div>';
+
+    // ── Vista lado a lado ─────────────────────────────────────────────────
+    echo '<div id="view-side">';
     echo html_writer::start_tag('div', ['style' => 'display:grid;grid-template-columns:1fr 1fr;gap:16px;']);
 
-    // Columna alumno
     echo html_writer::start_div('');
     echo html_writer::tag('p', html_writer::tag('strong', '👤 Respuesta del Estudiante'), ['style' => 'margin-bottom:6px;']);
     echo html_writer::tag('pre',
@@ -81,7 +89,6 @@ if ($cangrade) {
          'onscroll' => 'syncScroll(this, "code-solution")']);
     echo html_writer::end_div();
 
-    // Columna solución
     echo html_writer::start_div('');
     echo html_writer::tag('p', html_writer::tag('strong', '✅ Solución de Referencia'), ['style' => 'margin-bottom:6px;']);
     echo html_writer::tag('pre',
@@ -92,6 +99,21 @@ if ($cangrade) {
     echo html_writer::end_div();
 
     echo html_writer::end_tag('div');
+    echo '</div>'; // view-side
+
+    // ── Vista diff (línea a línea) ────────────────────────────────────────
+    echo '<div id="view-diff" style="display:none;">';
+    echo '<p style="font-size:12px;color:#666;margin-bottom:8px;">
+        <span style="background:#ffd7d7;padding:2px 8px;border-radius:3px;margin-right:8px;">— Solo en estudiante</span>
+        <span style="background:#d4f4d4;padding:2px 8px;border-radius:3px;margin-right:8px;">+ Solo en solución</span>
+        <span style="background:#f8f9fa;padding:2px 8px;border-radius:3px;">· En común</span>
+    </p>';
+    echo '<div id="diff-container" style="font-family:monospace;font-size:12px;border:1px solid #dee2e6;border-radius:6px;overflow:auto;max-height:500px;"></div>';
+    echo '</div>'; // view-diff
+
+    // ── Estadísticas del diff ─────────────────────────────────────────────
+    echo '<div id="diff-stats" style="display:none;margin-top:10px;font-size:12px;color:#666;background:#f8f9fa;padding:8px 12px;border-radius:6px;"></div>';
+
     echo html_writer::tag('script', '
 var _syncing = false;
 function syncScroll(src, targetId) {
@@ -103,6 +125,92 @@ function syncScroll(src, targetId) {
         target.scrollLeft = src.scrollLeft;
     }
     _syncing = false;
+}
+
+function showTab(tab) {
+    document.getElementById("view-side").style.display = tab === "side" ? "block" : "none";
+    document.getElementById("view-diff").style.display = tab === "diff" ? "block" : "none";
+    document.getElementById("diff-stats").style.display = tab === "diff" ? "block" : "none";
+    document.getElementById("tab-side").className = tab === "side" ? "btn btn-sm btn-primary" : "btn btn-sm btn-outline-secondary";
+    document.getElementById("tab-diff").className = tab === "diff" ? "btn btn-sm btn-primary" : "btn btn-sm btn-outline-secondary";
+    if (tab === "diff" && !document.getElementById("diff-container").dataset.built) {
+        buildDiff();
+    }
+}
+
+// ── Algoritmo LCS para diff línea a línea ────────────────────────────────
+function buildDiff() {
+    var student  = ' . json_encode($submission->answer) . ';
+    var solution = ' . json_encode($aiassignment->solution) . ';
+    var sLines = student.split("\n");
+    var rLines = solution.split("\n");
+
+    // LCS tabla
+    var m = Math.min(sLines.length, 200);
+    var n = Math.min(rLines.length, 200);
+    var dp = [];
+    for (var i = 0; i <= m; i++) {
+        dp[i] = new Array(n + 1).fill(0);
+    }
+    for (var i = 1; i <= m; i++) {
+        for (var j = 1; j <= n; j++) {
+            dp[i][j] = sLines[i-1] === rLines[j-1]
+                ? dp[i-1][j-1] + 1
+                : Math.max(dp[i-1][j], dp[i][j-1]);
+        }
+    }
+
+    // Reconstruir diff
+    var diff = [];
+    var i = m, j = n;
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && sLines[i-1] === rLines[j-1]) {
+            diff.unshift({type: "common", line: sLines[i-1]});
+            i--; j--;
+        } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
+            diff.unshift({type: "added", line: rLines[j-1]});
+            j--;
+        } else {
+            diff.unshift({type: "removed", line: sLines[i-1]});
+            i--;
+        }
+    }
+
+    // Si hay líneas extra (>200)
+    if (sLines.length > 200 || rLines.length > 200) {
+        diff.push({type: "info", line: "... (truncado a 200 líneas por rendimiento)"});
+    }
+
+    var added = 0, removed = 0, common = 0;
+    var html = "";
+    diff.forEach(function(d, idx) {
+        var bg = d.type === "removed" ? "#ffd7d7"
+               : d.type === "added"   ? "#d4f4d4"
+               : d.type === "info"    ? "#fff3cd"
+               : "#f8f9fa";
+        var prefix = d.type === "removed" ? "−" : d.type === "added" ? "+" : " ";
+        var color  = d.type === "removed" ? "#721c24" : d.type === "added" ? "#155724" : "#666";
+        if (d.type === "removed") removed++;
+        if (d.type === "added")   added++;
+        if (d.type === "common")  common++;
+        html += "<div style=\'background:" + bg + ";padding:2px 8px;border-bottom:1px solid rgba(0,0,0,0.05);white-space:pre;\'>" +
+            "<span style=\'color:" + color + ";font-weight:700;user-select:none;margin-right:8px;\'>" + prefix + "</span>" +
+            "<span style=\'color:" + color + ";\'>" + escHtml(d.line) + "</span></div>";
+    });
+
+    document.getElementById("diff-container").innerHTML = html || "<p style=\'padding:12px;color:#666;\'>Sin diferencias detectadas.</p>";
+    document.getElementById("diff-container").dataset.built = "1";
+
+    var similarity = common > 0 ? Math.round(common / Math.max(sLines.length, rLines.length) * 100) : 0;
+    document.getElementById("diff-stats").innerHTML =
+        "📊 <strong>Líneas en común:</strong> " + common +
+        " &nbsp;|&nbsp; <strong style=\'color:#721c24;\'>Solo en estudiante:</strong> " + removed +
+        " &nbsp;|&nbsp; <strong style=\'color:#155724;\'>Solo en solución:</strong> " + added +
+        " &nbsp;|&nbsp; <strong>Similitud de líneas:</strong> " + similarity + "%";
+}
+
+function escHtml(s) {
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 ');
     echo $OUTPUT->box_end();

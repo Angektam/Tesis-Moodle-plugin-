@@ -49,6 +49,28 @@ if ($dist_row) {
     $grade_dist['<60']    = (int)$dist_row->glow;
 }
 
+// ── Distribución de lenguajes detectados ─────────────────────────────────
+$lang_dist = [];
+if (!empty($aiassignments)) {
+    list($insql, $inparams) = $DB->get_in_or_equal(array_keys($aiassignments));
+    $lang_subs = $DB->get_records_sql(
+        "SELECT answer FROM {aiassignment_submissions} s
+         JOIN {aiassignment} a ON s.assignment = a.id
+         WHERE a.course = :courseid AND a.type IN ('programming','debugging')
+         ORDER BY s.timecreated DESC LIMIT 200",
+        ['courseid' => $courseid]
+    );
+    $lang_counts = [];
+    foreach ($lang_subs as $ls) {
+        $lk = \mod_aiassignment\security::detect_language($ls->answer);
+        if (!empty($lk)) {
+            $lang_counts[$lk] = ($lang_counts[$lk] ?? 0) + 1;
+        }
+    }
+    arsort($lang_counts);
+    $lang_dist = $lang_counts;
+}
+
 echo $OUTPUT->header();
 
 echo html_writer::start_div('aiassignment-dashboard');
@@ -388,6 +410,24 @@ if ($has_grade_data) {
 }
 echo html_writer::end_div();
 
+// ── Distribución de lenguajes usados ─────────────────────────────────────
+echo html_writer::start_div('dashboard-section');
+echo html_writer::tag('h3', get_string('lang_distribution', 'mod_aiassignment'), ['class' => 'section-title']);
+if (!empty($lang_dist)) {
+    echo '<div class="chart-container chart-md"><canvas id="langChart"></canvas></div>';
+    $lang_labels_json = json_encode(array_map(function($k) {
+        $names = ['python'=>'Python','javascript'=>'JavaScript','java'=>'Java',
+                  'cpp'=>'C/C++','php'=>'PHP','sql'=>'SQL','typescript'=>'TypeScript',
+                  'ruby'=>'Ruby','go'=>'Go','rust'=>'Rust'];
+        return $names[$k] ?? $k;
+    }, array_keys($lang_dist)));
+    $lang_data_json = json_encode(array_values($lang_dist));
+    echo html_writer::tag('script', "window._langLabels=$lang_labels_json; window._langData=$lang_data_json;");
+} else {
+    echo html_writer::tag('p', 'Sin datos de lenguajes aún.', ['class' => 'alert alert-info', 'style' => 'font-size:13px;']);
+}
+echo html_writer::end_div();
+
 // ── Correlación Plagio vs Calificación ────────────────────────
 $corr_raw = aiassignment_get_plagiarism_vs_grade($courseid);
 $corr_pts = [];
@@ -576,6 +616,26 @@ echo "
                     plugins: {
                         legend: { position: 'bottom', labels: { font: { size: 11 } } }
                     }
+                }
+            });
+        }
+
+        // ── Gráfica de distribución de lenguajes ──
+        var langEl = document.getElementById('langChart');
+        if (langEl && window._langLabels) {
+            new Chart(langEl, {
+                type: 'pie',
+                data: {
+                    labels: window._langLabels,
+                    datasets: [{
+                        data: window._langData,
+                        backgroundColor: ['#3B82F6','#F59E0B','#EF4444','#10B981','#8B5CF6','#06B6D4','#EC4899','#84CC16','#F97316','#6366F1'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
                 }
             });
         }

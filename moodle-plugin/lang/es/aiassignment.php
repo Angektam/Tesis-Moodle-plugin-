@@ -324,3 +324,13 @@ $string['pastduedate']           = '⛔ La fecha límite de entrega ya pasó. No
 $string['assignmentnotopen']     = '🔒 Esta tarea aún no está disponible.';
 $string['duedatesoon']           = '⚠️ La fecha límite es pronto: {$a}';
 $string['submissiondetectedlang']= 'Lenguaje detectado';
+
+// ── v2.5.2 ────────────────────────────────────────────────────────────────
+$string['lang_incompatible_type'] = 'El lenguaje requerido no aplica para este tipo de problema.';
+$string['diff_view']              = '🔍 Vista de diferencias (diff)';
+$string['diff_added']             = 'Líneas solo en solución de referencia';
+$string['diff_removed']           = 'Líneas solo en respuesta del estudiante';
+$string['diff_unchanged']         = 'Líneas en común';
+$string['lang_distribution']      = '🔤 Distribución de lenguajes usados';
+$string['plagiarism_webhook_sent']= 'Alerta de plagio enviada al webhook.';
+$string['no_tests_found']         = 'Esta tarea no tiene casos de prueba configurados.';

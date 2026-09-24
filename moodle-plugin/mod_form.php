@@ -85,6 +85,7 @@ class mod_aiassignment_mod_form extends moodleform_mod {
         $mform->hideIf('required_language', 'type', 'eq', 'math');
         $mform->hideIf('required_language', 'type', 'eq', 'essay');
         $mform->hideIf('required_language', 'type', 'eq', 'pseudocode');
+        $mform->hideIf('required_language', 'type', 'eq', 'sql');
 
         // Solución de referencia
         $mform->addElement('textarea', 'solution', get_string('solution', 'aiassignment'),
@@ -196,6 +197,12 @@ class mod_aiassignment_mod_form extends moodleform_mod {
         // Validar que duedate sea posterior a timeopen si ambos están definidos.
         if (!empty($data['duedate']) && !empty($data['timeopen']) && $data['duedate'] <= $data['timeopen']) {
             $errors['duedate'] = get_string('duedatebeforetimeopen', 'aiassignment');
+        }
+
+        // Validar que required_language sea compatible con el tipo de problema.
+        $incompatible_types = ['math', 'essay'];
+        if (!empty($data['required_language']) && in_array($data['type'] ?? '', $incompatible_types)) {
+            $errors['required_language'] = get_string('lang_incompatible_type', 'aiassignment');
         }
 
         return $errors;

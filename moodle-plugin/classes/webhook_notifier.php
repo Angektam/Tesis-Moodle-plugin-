@@ -25,6 +25,12 @@ class webhook_notifier {
 
         if ($score < $threshold) return;
 
+        // ── Evitar alertas duplicadas en la misma hora ───────────────
+        $cache     = \cache::make('mod_aiassignment', 'plagiarism');
+        $dedup_key = 'webhook_alert_' . $assignment->id . '_' . date('YmdH');
+        if ($cache->get($dedup_key)) return;
+        $cache->set($dedup_key, 1);
+
         $message = self::build_message($plagiarism_data, $course, $assignment, $score);
 
         // Slack
